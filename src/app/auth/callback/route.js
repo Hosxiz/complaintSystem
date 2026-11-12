@@ -1,0 +1,47 @@
+// ==============================================================================
+// 🔄 Callback Route สำหรับ OAuth (Google Login)
+// Supabase จะส่งผู้ใช้กลับมาที่หน้านี้เพื่อแลกเปลี่ยน Authorization Code เป็น Session
+// ==============================================================================
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
+
+export async function GET(request) {
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  const next = searchParams.get('next') || '/dashboard'
+
+  if (code) {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch {
+              // Server Action / Route Handler
+            }
+          },
+        },
+      }
+    )
+
+    // แลก code เป็น session ที่สมบูรณ์
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
+  }
+
+  // ถ้าแลกไม่สำเร็จ ให้ส่งกลับหน้า login
+  return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`)
+}
+
