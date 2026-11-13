@@ -287,7 +287,7 @@ export default function LoginPage() {
             >
               <div className="text-center space-y-1 hidden lg:block">
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                  Welcome back!
+                  ยินดีต้อนรับกลับมา
                 </h1>
                 <p className="text-slate-400 text-xs sm:text-sm">
                   Sign in to your account to continue
@@ -414,26 +414,25 @@ export default function LoginPage() {
             {isSignUp ? (
               <>
                 <h2 className="text-3xl xl:text-4xl font-extrabold tracking-tight leading-[1.15] text-white">
-                  ร่วมสร้างสังคมที่ปลอดภัย <br />
+                  ระบบรับเรื่องร้องเรียน ติดตาม <br />
                   <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-blue-200 bg-clip-text text-transparent">
-                    ส่งเรื่องง่าย ได้ผลจริง
+                    แก้ไขปัญหา ได้อย่างเป็นระบบ
                   </span>
                 </h2>
                 <p className="text-slate-300 text-sm font-normal leading-relaxed">
-                  เริ่มต้นเป็นส่วนหนึ่งในการแจ้งปัญหาเพื่อการพัฒนาองค์กร พร้อมระบบติดตามสถานะแบบโปร่งใส
+                  เริ่มต้นเป็นส่วนหนึ่งในการแจ้งปัญหาเพื่อการพัฒนาองค์กร พร้อมระบบติดตามสถานะ
                 </p>
               </>
             ) : (
               <>
                 <h2 className="text-3xl xl:text-4xl font-extrabold tracking-tight leading-[1.15] text-white">
-                  ระบบรับเรื่องร้องเรียน <br />
+                  Welcome <br />
                   <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-blue-200 bg-clip-text text-transparent">
-                    โปร่งใส ตรวจสอบได้
+                    คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยสวนดุสิต
                   </span>
                 </h2>
                 <p className="text-slate-300 text-sm font-normal leading-relaxed">
-                  แพลตฟอร์มบริหารจัดการเรื่องร้องทุกข์ระดับองค์กร พร้อมโหมดซ่อนตัวตน (Anonymous Whistleblower) ปลอดภัยทุกการติดตาม
-                </p>
+                  เข้าสู่ระบบเพื่อแจ้งเรื่องร้องเรียน เสนอไอเดีย หรือติดตามความคืบหน้าเรื่องที่คุณส่งไว้                </p>
               </>
             )}
           </div>

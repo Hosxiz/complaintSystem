@@ -54,16 +54,7 @@ export default async function StaffPage() {
     <div className="min-h-screen bg-slate-50">
       <Navbar profile={profile} />
 
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            กองกลางเรื่องร้องเรียนสำหรับเจ้าหน้าที่ (Staff Pool)
-          </h1>
-          <p className="text-slate-500 text-sm mt-0.5">
-            รวมเรื่องร้องเรียนที่แจ้งเข้ามาในระบบ เจ้าหน้าที่ทุกคนสามารถตรวจสอบและร่วมดำเนินการได้
-          </p>
-        </div>
-
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <StaffClientView initialTickets={tickets} staffProfile={profile} />
       </main>
     </div>
