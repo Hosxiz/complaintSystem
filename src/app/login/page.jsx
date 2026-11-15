@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { ShieldCheck, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { ShieldCheck, Loader2, AlertCircle, CheckCircle2, ArrowLeft, Mail, KeyRound, X } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -17,6 +17,13 @@ export default function LoginPage() {
 
   // 'signin' หรือ 'signup'
   const [mode, setMode] = useState('signin')
+
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotError, setForgotError] = useState('')
+  const [forgotSuccess, setForgotSuccess] = useState('')
 
   // ตรวจจับ Query Parameter เช่น /login?mode=signup เพื่อสลับแท็บไปสมัครสมาชิกอัตโนมัติ
   useEffect(() => {
@@ -113,6 +120,32 @@ export default function LoginPage() {
     } catch (err) {
       setErrorMsg(err.message || 'ไม่สามารถเข้าสู่ระบบด้วย Microsoft ได้')
       setLoading(false)
+    }
+  }
+
+  // 📧 ฟังก์ชันส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของผู้ใช้
+  const handleForgotPassword = async (e) => {
+    e.preventDefault()
+    if (!forgotEmail.trim()) return
+
+    setForgotLoading(true)
+    setForgotError('')
+    setForgotSuccess('')
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+      })
+
+      if (error) throw error
+
+      setForgotSuccess(
+        'ระบบได้ส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปยังอีเมลของคุณเรียบร้อยแล้ว กรุณาเปิดกล่องจดหมายของคุณ (หรือโฟลเดอร์ Junk/Spam)'
+      )
+    } catch (err) {
+      setForgotError(err.message || 'ไม่สามารถส่งอีเมลรีเซ็ตรหัสผ่านได้ กรุณาตรวจสอบอีเมลอีกครั้ง')
+    } finally {
+      setForgotLoading(false)
     }
   }
 
@@ -418,9 +451,23 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    รหัสผ่าน (Password)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      รหัสผ่าน (Password)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotModal(true)
+                        setForgotEmail(email || '')
+                        setForgotError('')
+                        setForgotSuccess('')
+                      }}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition hover:underline"
+                    >
+                      ลืมรหัสผ่าน?
+                    </button>
+                  </div>
                   <input
                     type="password"
                     required
@@ -525,6 +572,118 @@ export default function LoginPage() {
         </div>
 
       </div>
+
+      {/* ============================================================================== */}
+      {/* 📧 Modal ลืมรหัสผ่าน (Forgot Password Modal)                                    */}
+      {/* ============================================================================== */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-5 relative">
+            {/* ปุ่มปิด Modal */}
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* หัวข้อ Modal */}
+            <div className="space-y-2">
+              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                ลืมรหัสผ่าน?
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                กรอกอีเมลที่คุณใช้สมัครสมาชิก ระบบจะส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปยังกล่องจดหมายของคุณทันที
+              </p>
+            </div>
+
+            {/* กล่องแจ้งเตือน Error */}
+            {forgotError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{forgotError}</span>
+              </div>
+            )}
+
+            {/* กล่องแจ้งเตือน Success */}
+            {forgotSuccess && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl flex items-start gap-2.5 leading-relaxed">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{forgotSuccess}</span>
+              </div>
+            )}
+
+            {!forgotSuccess ? (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    อีเมลที่ลงทะเบียนไว้
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      required
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 border border-slate-200 rounded-xl text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(false)}
+                    className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="flex-1 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-blue-500/25 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>กำลังส่ง...</span>
+                      </>
+                    ) : (
+                      <span>ส่งลิงก์รีเซ็ต</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition"
+                >
+                  เข้าใจแล้ว ปิดหน้าต่างนี้
+                </button>
+              </div>
+            )}
+
+            <div className="pt-2 text-center border-t border-slate-100 flex items-center justify-center gap-4 text-xs text-slate-500">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 hover:text-blue-600 transition"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>กลับสู่หน้าหลัก</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
