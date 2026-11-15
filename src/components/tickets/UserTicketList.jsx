@@ -7,7 +7,6 @@
 import { useState } from 'react'
 import { STATUS_CONFIG } from '@/lib/tickets/status-config'
 import TicketDiscussion from '@/components/tickets/TicketDiscussion'
-import ReopenTicketModal from '@/components/tickets/ReopenTicketModal'
 import { createClient } from '@/lib/supabase/client'
 import {
   Inbox,
@@ -16,7 +15,6 @@ import {
   X,
   Calendar,
   MessageSquare,
-  RotateCcw,
   Clock,
   CheckCircle2,
   FileText,
@@ -26,15 +24,6 @@ export default function UserTicketList({ initialTickets = [] }) {
   const supabase = createClient()
   const [tickets, setTickets] = useState(initialTickets)
   const [selectedTicket, setSelectedTicket] = useState(null)
-  const [showReopenModal, setShowReopenModal] = useState(false)
-
-  // จัดการเมื่อเปิดเรื่องใหม่สำเร็จจาก Modal
-  const handleReopenSuccess = (updatedTicket) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
-    )
-    setSelectedTicket(updatedTicket)
-  }
 
   if (tickets.length === 0) {
     return (
@@ -178,24 +167,6 @@ export default function UserTicketList({ initialTickets = [] }) {
                 </div>
               </div>
 
-              {/* Re-open Button if RESOLVED */}
-              {selectedTicket.status === 'RESOLVED' && (
-                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="text-xs text-amber-800">
-                    <span className="font-bold block">ยังพบปัญหาอยู่หรือไม่?</span>
-                    หากยังไม่เรียบร้อย สามารถกดขอเปิดเรื่องใหม่เพื่อให้เจ้าหน้าที่ตรวจสอบต่อได้
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowReopenModal(true)}
-                    className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>ขอเปิดเรื่องใหม่ (พร้อมแนบหลักฐาน)</span>
-                  </button>
-                </div>
-              )}
-
               {/* Discussion & Chat Box (Public Channel) */}
               <div className="pt-2 border-t border-slate-100">
                 <TicketDiscussion ticketId={selectedTicket.id} currentRole="user" />
@@ -204,14 +175,6 @@ export default function UserTicketList({ initialTickets = [] }) {
           </div>
         </div>
       )}
-
-      {/* 🛡️ Modal ยืนยันการขอเปิดเรื่องใหม่พร้อมแนบหลักฐาน */}
-      <ReopenTicketModal
-        isOpen={showReopenModal}
-        ticket={selectedTicket}
-        onClose={() => setShowReopenModal(false)}
-        onSuccess={handleReopenSuccess}
-      />
     </div>
   )
 }

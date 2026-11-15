@@ -2,14 +2,12 @@
 
 // ==============================================================================
 // 🔍 หน้าจอติดตามสถานะตั๋ว (Track by Ticket Code หรือ Tracking Code)
-// มีปุ่มขอเปิดเรื่องใหม่ (Re-open) เมื่อเคสจบแบบ RESOLVED แต่เด็กยังไม่พอใจ
 // ==============================================================================
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_CONFIG } from '@/lib/tickets/status-config'
 import TicketDiscussion from '@/components/tickets/TicketDiscussion'
-import ReopenTicketModal from '@/components/tickets/ReopenTicketModal'
-import { Search, RotateCcw, AlertCircle, CheckCircle, Clock, MessageSquare } from 'lucide-react'
+import { Search, AlertCircle, CheckCircle, Clock, MessageSquare } from 'lucide-react'
 
 export default function TicketTracker() {
   const supabase = createClient()
@@ -17,7 +15,6 @@ export default function TicketTracker() {
   const [loading, setLoading] = useState(false)
   const [ticket, setTicket] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
-  const [showReopenModal, setShowReopenModal] = useState(false)
 
   // ฟังก์ชันค้นหาตั๋วด้วย Ticket Code หรือ Tracking Code
   const handleSearch = async (e) => {
@@ -58,28 +55,6 @@ export default function TicketTracker() {
       setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการค้นหา')
     } finally {
       setLoading(false)
-    }
-  }
-
-  // 🔄 ปุ่มวิเศษ: "ขอเปิดเรื่องใหม่ (Re-open)"
-  const handleReopen = async () => {
-    if (!ticket) return
-    setReopenLoading(true)
-
-    try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({ status: 'IN_PROGRESS' })
-        .eq('id', ticket.id)
-
-      if (error) throw error
-
-      // อัปเดตสถานะบนหน้าจอทันที
-      setTicket((prev) => ({ ...prev, status: 'IN_PROGRESS' }))
-    } catch (err) {
-      alert('ไม่สามารถเปิดเรื่องใหม่ได้: ' + err.message)
-    } finally {
-      setReopenLoading(false)
     }
   }
 
@@ -163,34 +138,8 @@ export default function TicketTracker() {
           <div className="pt-4 border-t border-gray-100">
             <TicketDiscussion ticketId={ticket.id} currentRole="user" />
           </div>
-
-          {/* 🔄 ปุ่มขอเปิดเรื่องใหม่ (เฉพาะเมื่อสถานะเป็น RESOLVED) */}
-          {ticket.status === 'RESOLVED' && (
-            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-xs text-amber-800">
-                <span className="font-bold block">ยังพบปัญหาอยู่หรือไม่?</span>
-                หากปัญหายังไม่ได้รับการแก้ไขอย่างถูกต้อง คุณสามารถกดขอเปิดเรื่องใหม่ได้
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowReopenModal(true)}
-                className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>ขอเปิดเรื่องใหม่ (พร้อมแนบหลักฐาน)</span>
-              </button>
-            </div>
-          )}
         </div>
       )}
-
-      {/* 🛡️ Modal ยืนยันการขอเปิดเรื่องใหม่พร้อมแนบหลักฐาน */}
-      <ReopenTicketModal
-        isOpen={showReopenModal}
-        ticket={ticket}
-        onClose={() => setShowReopenModal(false)}
-        onSuccess={(updatedTicket) => setTicket(updatedTicket)}
-      />
     </div>
   )
 }

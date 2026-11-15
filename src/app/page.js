@@ -8,7 +8,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_CONFIG } from '@/lib/tickets/status-config'
 import TicketDiscussion from '@/components/tickets/TicketDiscussion'
-import ReopenTicketModal from '@/components/tickets/ReopenTicketModal'
 import {
   Search,
   Building2,
@@ -19,7 +18,6 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
-  RotateCcw,
   Loader2,
 } from 'lucide-react'
 
@@ -29,7 +27,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [searchResult, setSearchResult] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
-  const [showReopenModal, setShowReopenModal] = useState(false)
 
   // ฟังก์ชันค้นหาและติดตามตั๋วแบบ Realtime จากหน้าแรก
   const handleTrackSearch = async (e) => {
@@ -228,24 +225,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* ปุ่มขอเปิดเรื่องใหม่ถ้า RESOLVED */}
-                {searchResult.status === 'RESOLVED' && (
-                  <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="text-xs text-amber-800">
-                      <span className="font-bold block">ยังพบปัญหาอยู่หรือไม่?</span>
-                      หากยังไม่เรียบร้อย สามารถกดขอเปิดเรื่องใหม่เพื่อให้เจ้าหน้าที่ตรวจสอบต่อได้
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowReopenModal(true)}
-                      className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>ขอเปิดเรื่องใหม่</span>
-                    </button>
-                  </div>
-                )}
-
                 {/* กล่องแชทสนทนากับเจ้าหน้าที่ */}
                 <div className="pt-2 border-t border-slate-100">
                   <TicketDiscussion ticketId={searchResult.id} currentRole="user" />
@@ -351,16 +330,6 @@ export default function Home() {
       <footer className="bg-white border-t border-slate-200 py-6 px-4 text-center text-xs text-slate-400">
         Copyright © 2026 Complaint Management System. All rights reserved.
       </footer>
-
-      {/* Modal ขอเปิดเรื่องใหม่เมื่อค้นหาเจอเรื่องที่เสร็จสิ้นแล้ว */}
-      {searchResult && (
-        <ReopenTicketModal
-          isOpen={showReopenModal}
-          ticket={searchResult}
-          onClose={() => setShowReopenModal(false)}
-          onSuccess={(updated) => setSearchResult(updated)}
-        />
-      )}
     </div>
   )
 }
