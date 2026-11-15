@@ -31,3 +31,7 @@ Thumbs.db
 !.vscode/extensions.json
 .idea/
 
+# Agent & AI configuration (Local only, not pushed to GitHub)
+.agents/
+AGENTS.md
+

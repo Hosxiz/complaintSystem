@@ -61,7 +61,7 @@ export default function Navbar({ profile }) {
 
             {/* 🚪 เมนูนำทางแบบแยกสิทธิ์ชัดเจน (Strict Role Separation) */}
             <div className="hidden md:flex items-center gap-1.5 pl-2 border-l border-slate-200">
-              
+
               {/* 1. เฉพาะ User ทั่วไป และ Admin เท่านั้นที่เห็นหน้าส่งเรื่อง (/dashboard) */}
               {role !== 'staff' && (
                 <Link
@@ -111,13 +111,12 @@ export default function Navbar({ profile }) {
                   {displayName}
                 </span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold uppercase tracking-wider ${
-                    role === 'admin'
-                      ? 'bg-purple-100 text-purple-700'
-                      : role === 'staff'
+                  className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold uppercase tracking-wider ${role === 'admin'
+                    ? 'bg-purple-100 text-purple-700'
+                    : role === 'staff'
                       ? 'bg-amber-100 text-amber-800'
                       : 'bg-blue-50 text-blue-600'
-                  }`}
+                    }`}
                 >
                   {role}
                 </span>
