@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import Navbar from '@/components/layout/Navbar'
 import NewTicketForm from '@/components/tickets/NewTicketForm'
 import TicketTracker from '@/components/tickets/TicketTracker'
+import UserTicketList from '@/components/tickets/UserTicketList'
 import { STATUS_CONFIG } from '@/lib/tickets/status-config'
 import { Inbox, FileText, CheckCircle2, Clock } from 'lucide-react'
 
@@ -40,10 +41,12 @@ export default async function UserDashboard() {
         ticket_code,
         tracking_code,
         title,
+        description,
         status,
         is_anonymous,
         created_at,
-        category:categories(name)
+        category:categories(name),
+        attachments:ticket_attachments(id, file_name, file_url, mime_type, file_size_bytes)
       `)
       .order('created_at', { ascending: false })
 
@@ -127,52 +130,7 @@ export default async function UserDashboard() {
                 <span className="text-xs text-slate-400">{tickets.length} รายการ</span>
               </div>
 
-              {tickets.length === 0 ? (
-                <div className="py-12 text-center text-slate-400">
-                  <Inbox className="w-10 h-10 mx-auto mb-2 text-slate-300 stroke-1" />
-                  <p className="text-sm font-medium">ยังไม่มีเรื่องร้องเรียน</p>
-                  <p className="text-xs text-slate-400 mt-1">ส่งเรื่องแรกของคุณผ่านฟอร์มทางขวาได้เลย</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100 mt-2">
-                  {tickets.map((t) => {
-                    const statusInfo = STATUS_CONFIG[t.status] || STATUS_CONFIG.SUBMITTED
-                    return (
-                      <div
-                        key={t.id}
-                        className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/60 p-2 rounded-xl transition"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono font-bold text-blue-600">
-                              {t.ticket_code}
-                            </span>
-                            {t.is_anonymous && (
-                              <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium">
-                                ซ่อนตัวตน 🥷
-                              </span>
-                            )}
-                          </div>
-                          <h3 className="font-bold text-slate-800 text-sm mt-0.5">{t.title}</h3>
-                          <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
-                            <span>{t.category?.name || 'หมวดหมู่ทั่วไป'}</span>
-                            <span>•</span>
-                            <span>{new Date(t.created_at).toLocaleDateString('th-TH')}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3 self-end sm:self-center">
-                          <span
-                            className={`text-xs px-3 py-1 rounded-full font-semibold border ${statusInfo.color}`}
-                          >
-                            {statusInfo.label}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+              <UserTicketList initialTickets={tickets} />
             </div>
 
             {/* กล่องค้นหาด้วย Tracking Code */}

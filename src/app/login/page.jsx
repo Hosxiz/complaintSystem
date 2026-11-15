@@ -5,10 +5,11 @@
 // Mobile: Clean Vertical Stack พร้อม Segmented Tab Controller ด้านบน (ใช้ง่ายด้วยนิ้วเดียว)
 // Desktop (lg+): Full-screen Sliding Blue Overlay Door Animation ตามสไตล์ต้นฉบับ
 // ==============================================================================
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { ShieldCheck, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { ShieldCheck, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -16,6 +17,17 @@ export default function LoginPage() {
 
   // 'signin' หรือ 'signup'
   const [mode, setMode] = useState('signin')
+
+  // ตรวจจับ Query Parameter เช่น /login?mode=signup เพื่อสลับแท็บไปสมัครสมาชิกอัตโนมัติ
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const requestedMode = params.get('mode') || params.get('tab')
+      if (requestedMode === 'signup' || requestedMode === 'register') {
+        setMode('signup')
+      }
+    }
+  }, [])
 
   // Form states
   const [email, setEmail] = useState('')
@@ -87,10 +99,36 @@ export default function LoginPage() {
     }
   }
 
+  const handleMicrosoftLogin = async () => {
+    try {
+      setLoading(true)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: 'email profile openid',
+        },
+      })
+      if (error) throw error
+    } catch (err) {
+      setErrorMsg(err.message || 'ไม่สามารถเข้าสู่ระบบด้วย Microsoft ได้')
+      setLoading(false)
+    }
+  }
+
   const isSignUp = mode === 'signup'
 
   return (
-    <div className="min-h-screen w-full bg-[#F0F2F6] flex items-center justify-center p-0 lg:p-6 font-sans">
+    <div className="min-h-screen w-full bg-[#F0F2F6] flex items-center justify-center p-0 lg:p-6 font-sans relative">
+      {/* 🏠 ปุ่มกลับสู่หน้าหลัก (Fixed Back to Home Button) */}
+      <Link
+        href="/"
+        className="fixed top-4 left-4 z-50 flex items-center gap-2 px-3.5 py-2 bg-white/90 hover:bg-white text-slate-700 hover:text-blue-600 rounded-xl text-xs font-bold shadow-md hover:shadow-lg border border-slate-200/80 backdrop-blur-md transition-all duration-200 group"
+      >
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        <span>กลับสู่หน้าหลัก</span>
+      </Link>
+
       {/* Container หลัก: บนมือถือเป็น full-width อิสระ / บนจอใหญ่เป็น Bento Card หรูหรา */}
       <div className="relative w-full min-h-screen lg:min-h-0 lg:h-[860px] lg:max-h-[92vh] max-w-[1400px] bg-white lg:rounded-3xl shadow-none lg:shadow-2xl overflow-hidden flex flex-col lg:flex-row">
 
@@ -108,6 +146,14 @@ export default function LoginPage() {
                 Complaint<span className="text-blue-500">Sys</span>
               </span>
             </div>
+
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold transition"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>หน้าหลัก</span>
+            </Link>
           </div>
           <h2 className="text-lg font-bold text-white relative z-10 leading-snug">
             ระบบรับเรื่องร้องเรียนโปร่งใส ปลอดภัย
@@ -182,18 +228,31 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                className="w-full py-3 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-between shadow-sm transition"
-              >
-                <div className="flex items-center gap-2.5">
-                  <GoogleIcon />
-                  <span>Continue with Google</span>
-                </div>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-between shadow-sm transition"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <GoogleIcon />
+                    <span>Continue with Google</span>
+                  </div>
+                </button>
 
-              </button>
+                <button
+                  type="button"
+                  onClick={handleMicrosoftLogin}
+                  disabled={loading}
+                  className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-between shadow-sm transition"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <MicrosoftIcon />
+                    <span>เข้าสู่ระบบด้วย Microsoft (SDU Mail)</span>
+                  </div>
+                </button>
+              </div>
 
               <div className="relative my-2">
                 <div className="absolute inset-0 flex items-center">
@@ -308,18 +367,31 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                className="w-full py-3 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-between shadow-sm transition"
-              >
-                <div className="flex items-center gap-2.5">
-                  <GoogleIcon />
-                  <span>Continue with Google</span>
-                </div>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-between shadow-sm transition"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <GoogleIcon />
+                    <span>Continue with Google</span>
+                  </div>
+                </button>
 
-              </button>
+                <button
+                  type="button"
+                  onClick={handleMicrosoftLogin}
+                  disabled={loading}
+                  className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-between shadow-sm transition"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <MicrosoftIcon />
+                    <span>เข้าสู่ระบบด้วย Microsoft (SDU Mail)</span>
+                  </div>
+                </button>
+              </div>
 
               <div className="relative my-2">
                 <div className="absolute inset-0 flex items-center">
@@ -401,13 +473,23 @@ export default function LoginPage() {
           <div className="absolute -bottom-20 left-1/4 w-96 h-96 bg-blue-700/25 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute inset-0 opacity-45 bg-[radial-gradient(circle_at_70%_50%,rgba(37,99,235,0.5)_0%,rgba(2,6,23,0.98)_70%)] pointer-events-none" />
 
-          <div className="relative z-10 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <ShieldCheck className="w-6 h-6 text-white" />
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <ShieldCheck className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-black tracking-tight text-white">
+                Complaint<span className="text-blue-500">Sys</span>
+              </span>
             </div>
-            <span className="text-2xl font-black tracking-tight text-white">
-              Complaint<span className="text-blue-500">Sys</span>
-            </span>
+
+            <Link
+              href="/"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold backdrop-blur-sm transition group"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+              <span>กลับสู่หน้าหลัก</span>
+            </Link>
           </div>
 
           <div className="relative z-10 my-auto py-10 space-y-4 max-w-lg transition-all duration-500">
@@ -466,6 +548,17 @@ function GoogleIcon() {
         fill="#EA4335"
         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
       />
+    </svg>
+  )
+}
+
+function MicrosoftIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" viewBox="0 0 21 21">
+      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
     </svg>
   )
 }

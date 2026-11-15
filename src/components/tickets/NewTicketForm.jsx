@@ -15,6 +15,7 @@ export default function NewTicketForm({ categories = [] }) {
   const [title, setTitle] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [description, setDescription] = useState('')
+  const [contactInfo, setContactInfo] = useState('')
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
 
@@ -54,7 +55,12 @@ export default function NewTicketForm({ categories = [] }) {
       const ticketCode = generateTicketCode()
       const trackingCode = generateTrackingCode()
 
-      // 3. บันทึกตั๋วลง Database
+      // 3. รวมช่องทางติดต่อเพิ่มเติม (ถ้ามี) เข้ากับเนื้อหา
+      const fullDescription = contactInfo.trim()
+        ? `${description.trim()}\n\n📞 ช่องทางติดต่อเพิ่มเติม: ${contactInfo.trim()}`
+        : description.trim()
+
+      // 4. บันทึกตั๋วลง Database
       const { data: ticket, error: ticketError } = await supabase
         .from('tickets')
         .insert({
@@ -63,7 +69,7 @@ export default function NewTicketForm({ categories = [] }) {
           user_id: user.id,
           category_id: categoryId || null,
           title: title.trim(),
-          description: description.trim(),
+          description: fullDescription,
           is_anonymous: isAnonymous,
           status: 'SUBMITTED',
         })
@@ -157,6 +163,7 @@ export default function NewTicketForm({ categories = [] }) {
             setSuccessData(null)
             setTitle('')
             setDescription('')
+            setContactInfo('')
             setSelectedFile(null)
             setIsAnonymous(false)
             window.location.reload()
@@ -226,6 +233,23 @@ export default function NewTicketForm({ categories = [] }) {
             placeholder="อธิบายตำแหน่ง สิ่งที่เกิดขึ้น หรือรายละเอียดเพิ่มเติม..."
             className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+        </div>
+
+        {/* 📞 ช่องทางติดต่อกลับเพิ่มเติม (Optional) */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">
+            ช่องทางการติดต่อเพิ่มเติม (หากสะดวก)
+          </label>
+          <input
+            type="text"
+            value={contactInfo}
+            onChange={(e) => setContactInfo(e.target.value)}
+            placeholder="เช่น เบอร์โทรศัพท์ 08X-XXX-XXXX หรือ LINE ID"
+            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <p className="text-[11px] text-slate-400 mt-1">
+            เพื่อให้เจ้าหน้าที่ติดต่อประสานงานได้อย่างรวดเร็วและราบรื่น
+          </p>
         </div>
 
         {/* 📎 แนบไฟล์รูปภาพหลักฐาน (Optional) */}

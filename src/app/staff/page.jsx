@@ -33,7 +33,7 @@ export default async function StaffPage() {
     redirect('/dashboard')
   }
 
-  // 3. 🎯 ดึงตั๋วทั้งหมดในระบบมาแสดงในกองกลาง (Staff Shared Pool)
+  // 3. 🎯 ดึงตั๋วทั้งหมดในระบบมาแสดงในกองกลาง (Staff Shared Pool) พร้อมไฟล์แนบ
   const { data: tickets = [] } = await supabase
     .from('tickets')
     .select(`
@@ -46,7 +46,8 @@ export default async function StaffPage() {
       assigned_staff_id,
       created_at,
       category:categories(name),
-      complainant:profiles!tickets_user_id_fkey(full_name, email)
+      complainant:profiles!tickets_user_id_fkey(full_name, email),
+      attachments:ticket_attachments(id, file_name, file_url, mime_type, file_size_bytes)
     `)
     .order('created_at', { ascending: false })
 

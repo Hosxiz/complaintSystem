@@ -2,12 +2,14 @@
 
 // ==============================================================================
 // 🧑‍🏫 Staff Portal Client Component (Kanban Board & KPI Dashboard)
-// ออกแบบตาม Modern SaaS Helpdesk Ref: รองรับกระดาน Kanban, ตัวกรอง, สถิติ KPI และ Drawer รายละเอียด
+// ออกแบบตาม Modern SaaS Helpdesk Ref: รองรับกระดาน Kanban, ตัวกรอง, สถิติ KPI,
+// ส่งออกไฟล์รายงาน (Export CSV UTF-8 BOM), ลบคำร้องที่เสร็จแล้ว และบันทึกประวัติการลบ (Audit Logs)
 // ==============================================================================
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { STATUS_CONFIG } from '@/lib/tickets/status-config'
 import StaffStatusSelector from '@/components/staff/StaffStatusSelector'
 import TicketDiscussion from '@/components/tickets/TicketDiscussion'
+import { createClient } from '@/lib/supabase/client'
 import {
   Kanban,
   List,
@@ -25,14 +27,29 @@ import {
   TrendingUp,
   Inbox,
   Sparkles,
+  Download,
+  Trash2,
+  History,
+  FileSpreadsheet,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react'
 
 export default function StaffClientView({ initialTickets = [], staffProfile }) {
+  const supabase = createClient()
   const [tickets, setTickets] = useState(initialTickets)
   const [selectedTicket, setSelectedTicket] = useState(null)
   const [viewMode, setViewMode] = useState('kanban') // 'kanban' หรือ 'list'
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('ALL')
+
+  // States สำหรับระบบลบคำร้อง & บันทึกประวัติ
+  const [ticketToDelete, setTicketToDelete] = useState(null)
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [deletionLogs, setDeletionLogs] = useState([])
+  const [loadingLogs, setLoadingLogs] = useState(false)
 
   // คำนวณสถิติภาพรวม (KPI Stats เหมือนใน Ref)
   const stats = useMemo(() => {
@@ -114,6 +131,118 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
     setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
   }
 
+  // 📥 ฟังก์ชันส่งออกรายงานเป็นไฟล์ CSV (UTF-8 BOM สำหรับ Microsoft Excel ภาษาไทย)
+  const handleExportCSV = () => {
+    if (filteredTickets.length === 0) {
+      alert('ไม่มีข้อมูลเรื่องร้องเรียนสำหรับส่งออก')
+      return
+    }
+
+    const headers = [
+      'รหัสตั๋ว',
+      'วันที่แจ้ง',
+      'หัวข้อเรื่องร้องเรียน',
+      'หมวดหมู่',
+      'สถานะ',
+      'ผู้ร้องเรียน',
+      'รายละเอียดปัญหา',
+    ]
+
+    const rows = filteredTickets.map((t) => {
+      const statusInfo = STATUS_CONFIG[t.status] || STATUS_CONFIG.SUBMITTED
+      const dateStr = new Date(t.created_at).toLocaleString('th-TH')
+      const complainantName = t.is_anonymous
+        ? 'ซ่อนตัวตน (Anonymous Whistleblower)'
+        : t.complainant?.full_name || 'ผู้ใช้งาน'
+      const cleanDesc = (t.description || '').replace(/"/g, '""').replace(/\r?\n/g, ' ')
+      const cleanTitle = (t.title || '').replace(/"/g, '""')
+
+      return [
+        `"${t.ticket_code}"`,
+        `"${dateStr}"`,
+        `"${cleanTitle}"`,
+        `"${t.category?.name || 'ทั่วไป'}"`,
+        `"${statusInfo.label}"`,
+        `"${complainantName}"`,
+        `"${cleanDesc}"`,
+      ].join(',')
+    })
+
+    // ใส่ \uFEFF นำหน้าเพื่อให้ Excel เปิดภาษาไทยได้อย่างถูกต้อง
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute(
+      'download',
+      `รายงานเรื่องร้องเรียน_${new Date().toISOString().slice(0, 10)}.csv`
+    )
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // 📜 ดึงประวัติการลบคำร้อง (Audit Logs)
+  const fetchDeletionLogs = async () => {
+    setLoadingLogs(true)
+    try {
+      const { data, error } = await supabase
+        .from('ticket_deletion_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100)
+
+      if (!error && data) {
+        setDeletionLogs(data)
+      }
+    } catch (err) {
+      console.warn('Could not fetch deletion logs:', err.message)
+    } finally {
+      setLoadingLogs(false)
+    }
+  }
+
+  // 🗑️ ยืนยันการลบคำร้องที่เสร็จแล้ว พร้อมบันทึก Log
+  const handleConfirmDelete = async () => {
+    if (!ticketToDelete) return
+    setDeleteLoading(true)
+
+    try {
+      // 1. บันทึกลง Audit Log ก่อนลบ
+      try {
+        await supabase.from('ticket_deletion_logs').insert({
+          ticket_id: ticketToDelete.id,
+          ticket_code: ticketToDelete.ticket_code,
+          title: ticketToDelete.title,
+          category_name: ticketToDelete.category?.name || 'ทั่วไป',
+          deleted_by: staffProfile?.id || null,
+          deleted_by_name: staffProfile?.full_name || 'เจ้าหน้าที่',
+          reason: deleteReason.trim() || 'คำร้องได้รับการแก้ไขเสร็จสิ้นแล้ว ลบตามนโยบายจัดเก็บข้อมูล',
+        })
+      } catch (logErr) {
+        console.warn('Logging skipped:', logErr.message)
+      }
+
+      // 2. ลบคำร้องออกจากตาราง tickets
+      const { error } = await supabase.from('tickets').delete().eq('id', ticketToDelete.id)
+      if (error) throw error
+
+      // 3. อัปเดต UI ทันที
+      setTickets((prev) => prev.filter((t) => t.id !== ticketToDelete.id))
+      if (selectedTicket?.id === ticketToDelete.id) {
+        setSelectedTicket(null)
+      }
+      setTicketToDelete(null)
+      setDeleteReason('')
+      alert(`ลบคำร้อง ${ticketToDelete.ticket_code} และบันทึกประวัติเรียบร้อยแล้ว`)
+    } catch (err) {
+      alert('ไม่สามารถลบคำร้องได้: ' + err.message)
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-6 font-sans">
       {/* ============================================================================== */}
@@ -126,7 +255,7 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
               ยินดีต้อนรับ, {staffProfile?.full_name || 'เจ้าหน้าที่'} 👋
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 uppercase tracking-wide">
-              Staff
+              Staff Portal
             </span>
           </div>
           <p className="text-slate-500 text-xs sm:text-sm mt-1">
@@ -134,7 +263,8 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+          {/* ปุ่มสลับมุมมอง */}
           <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/70">
             <button
               onClick={() => setViewMode('kanban')}
@@ -227,9 +357,10 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
       </div>
 
       {/* ============================================================================== */}
-      {/* 3. กล่องค้นหา & ตัวกรองหมวดหมู่                                                   */}
+      {/* 3. กล่องค้นหา, ตัวกรองหมวดหมู่, ปุ่มส่งออกรายงาน และปุ่มประวัติการลบ              */}
       {/* ============================================================================== */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+        {/* ค้นหา */}
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -249,20 +380,47 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+        {/* เครื่องมือ: ฟิลเตอร์หมวดหมู่, ปุ่มส่งออก Excel/CSV, และปุ่มประวัติการลบ */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* กรองหมวดหมู่ */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            >
+              <option value="ALL">ทุกหมวดหมู่ ({tickets.length})</option>
+              {categoriesList.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 📥 ปุ่มส่งออกรายงาน CSV */}
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-xl text-xs font-bold transition shadow-sm"
+            title="ส่งออกรายงานเป็นไฟล์ Excel (CSV ภาษาไทยสมบูรณ์)"
           >
-            <option value="ALL">ทุกหมวดหมู่ ({tickets.length})</option>
-            {categoriesList.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
+            <Download className="w-4 h-4" />
+            <span>ส่งออกรายงาน ({filteredTickets.length})</span>
+          </button>
+
+          {/* 📜 ปุ่มเปิดดูประวัติการลบ */}
+          <button
+            onClick={() => {
+              setShowHistoryModal(true)
+              fetchDeletionLogs()
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition"
+            title="ดูบันทึกประวัติการลบคำร้อง (Audit Log)"
+          >
+            <History className="w-4 h-4" />
+            <span>ประวัติการลบ</span>
+          </button>
         </div>
       </div>
 
@@ -456,7 +614,7 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
       {/* 6. Slide-over Detail Drawer: หน้าต่างเปิดจากขวาเพื่อจัดการเคสและสนทนา             */}
       {/* ============================================================================== */}
       {selectedTicket && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <div className="fixed inset-0 z-50 overflow-hidden font-sans">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
@@ -533,6 +691,31 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
                 />
               </div>
 
+              {/* 🗑️ กล่องลบคำร้องที่เสร็จแล้ว (เฉพาะ RESOLVED หรือ CLOSED เท่านั้น!) */}
+              {(selectedTicket.status === 'RESOLVED' || selectedTicket.status === 'CLOSED') && (
+                <div className="p-4 bg-red-50/60 rounded-2xl border border-red-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-red-900 flex items-center gap-1.5">
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                      <span>ลบคำร้องที่เสร็จสิ้นแล้ว</span>
+                    </h4>
+                    <p className="text-[11px] text-red-700/80 mt-0.5">
+                      คำร้องนี้ได้รับการแก้ไขเสร็จสิ้นแล้ว เจ้าหน้าที่สามารถลบเพื่อจัดเก็บข้อมูล
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setTicketToDelete(selectedTicket)
+                      setDeleteReason('')
+                    }}
+                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-sm shrink-0 flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>ลบคำร้องนี้</span>
+                  </button>
+                </div>
+              )}
+
               {/* Issue Description */}
               <div className="space-y-2">
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -547,6 +730,153 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
               <div className="pt-2 border-t border-slate-100">
                 <TicketDiscussion ticketId={selectedTicket.id} currentRole="staff" />
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================================== */}
+      {/* 7. Modal ยืนยันการลบคำร้อง พร้อมระบุเหตุผล (Audit Log Input)                      */}
+      {/* ============================================================================== */}
+      {ticketToDelete && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">ยืนยันการลบคำร้องเรียน</h3>
+                <p className="text-xs text-slate-500 font-mono">รหัส: {ticketToDelete.ticket_code}</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 leading-relaxed">
+              ⚠️ การลบนี้จะเป็นการลบอย่างถาวร (รวมทั้งข้อความสนทนาและไฟล์แนบ)
+              ระบบจะบันทึกประวัติการลบและชื่อของคุณเพื่อความโปร่งใส
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                ระบุเหตุผลในการลบ (สำหรับบันทึกใน Audit Log)
+              </label>
+              <textarea
+                rows={2}
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="เช่น คำร้องเสร็จสิ้นสมบูรณ์แล้ว, จัดเก็บข้อมูลประจำเดือน..."
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setTicketToDelete(null)}
+                disabled={deleteLoading}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold transition"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+              >
+                {deleteLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>กำลังลบ...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>ยืนยันลบคำร้อง</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================================== */}
+      {/* 8. Modal ประวัติการลบคำร้อง (Deletion Audit Logs)                                */}
+      {/* ============================================================================== */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 space-y-4 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-base">ประวัติการลบคำร้องเรียน (Audit Logs)</h3>
+              </div>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              เก็บบันทึกประวัติอย่างโปร่งใส ตรวจสอบได้ว่าใครเป็นผู้ลบคำร้อง เมื่อใด และด้วยเหตุผลใด
+            </p>
+
+            <div className="flex-1 overflow-y-auto border border-slate-100 rounded-2xl">
+              {loadingLogs ? (
+                <div className="py-12 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                  <span>กำลังโหลดประวัติการลบ...</span>
+                </div>
+              ) : deletionLogs.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 text-xs">
+                  ยังไม่มีประวัติการลบคำร้องเรียนในระบบ
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px] sticky top-0">
+                    <tr>
+                      <th className="py-2.5 px-3">รหัสตั๋ว</th>
+                      <th className="py-2.5 px-3">หัวข้อเรื่อง</th>
+                      <th className="py-2.5 px-3">ผู้ลบ</th>
+                      <th className="py-2.5 px-3">เหตุผล</th>
+                      <th className="py-2.5 px-3">วันที่ลบ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {deletionLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-slate-50/70">
+                        <td className="py-2.5 px-3 font-mono font-bold text-blue-600">
+                          {log.ticket_code}
+                        </td>
+                        <td className="py-2.5 px-3 font-medium text-slate-900 max-w-[180px] truncate">
+                          {log.title}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600 font-medium">
+                          {log.deleted_by_name}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-500 max-w-[180px] truncate">
+                          {log.reason || '-'}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-400 font-medium whitespace-nowrap">
+                          {new Date(log.created_at).toLocaleString('th-TH')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+              >
+                ปิดหน้าต่าง
+              </button>
             </div>
           </div>
         </div>

@@ -7,6 +7,8 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_CONFIG } from '@/lib/tickets/status-config'
+import TicketDiscussion from '@/components/tickets/TicketDiscussion'
+import ReopenTicketModal from '@/components/tickets/ReopenTicketModal'
 import { Search, RotateCcw, AlertCircle, CheckCircle, Clock, MessageSquare } from 'lucide-react'
 
 export default function TicketTracker() {
@@ -15,7 +17,7 @@ export default function TicketTracker() {
   const [loading, setLoading] = useState(false)
   const [ticket, setTicket] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
-  const [reopenLoading, setReopenLoading] = useState(false)
+  const [showReopenModal, setShowReopenModal] = useState(false)
 
   // ฟังก์ชันค้นหาตั๋วด้วย Ticket Code หรือ Tracking Code
   const handleSearch = async (e) => {
@@ -40,7 +42,8 @@ export default function TicketTracker() {
           description,
           status,
           created_at,
-          category:categories(name)
+          category:categories(name),
+          attachments:ticket_attachments(id, file_name, file_url, mime_type, file_size_bytes)
         `)
         .or(`ticket_code.eq.${cleanKey},tracking_code.eq.${cleanKey}`)
         .maybeSingle()
@@ -156,6 +159,11 @@ export default function TicketTracker() {
             </p>
           </div>
 
+          {/* 💬 กล่องแชทสนทนากับเจ้าหน้าที่ */}
+          <div className="pt-4 border-t border-gray-100">
+            <TicketDiscussion ticketId={ticket.id} currentRole="user" />
+          </div>
+
           {/* 🔄 ปุ่มขอเปิดเรื่องใหม่ (เฉพาะเมื่อสถานะเป็น RESOLVED) */}
           {ticket.status === 'RESOLVED' && (
             <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -165,17 +173,24 @@ export default function TicketTracker() {
               </div>
               <button
                 type="button"
-                onClick={handleReopen}
-                disabled={reopenLoading}
-                className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition shrink-0"
+                onClick={() => setShowReopenModal(true)}
+                className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                {reopenLoading ? 'กำลังส่งคำขอ...' : 'ขอเปิดเรื่องใหม่ (Re-open)'}
+                <span>ขอเปิดเรื่องใหม่ (พร้อมแนบหลักฐาน)</span>
               </button>
             </div>
           )}
         </div>
       )}
+
+      {/* 🛡️ Modal ยืนยันการขอเปิดเรื่องใหม่พร้อมแนบหลักฐาน */}
+      <ReopenTicketModal
+        isOpen={showReopenModal}
+        ticket={ticket}
+        onClose={() => setShowReopenModal(false)}
+        onSuccess={(updatedTicket) => setTicket(updatedTicket)}
+      />
     </div>
   )
 }
