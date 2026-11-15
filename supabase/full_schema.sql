@@ -164,6 +164,14 @@ CREATE POLICY "Ticket update policy" ON public.tickets FOR UPDATE USING (
     OR (auth.uid() = user_id AND status = 'RESOLVED')
 );
 
+DROP POLICY IF EXISTS "Staff and admin can delete tickets" ON public.tickets;
+CREATE POLICY "Staff and admin can delete tickets" ON public.tickets FOR DELETE USING (
+    EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = auth.uid() AND role IN ('staff', 'admin')
+    )
+);
+
 -- Messages Policies
 DROP POLICY IF EXISTS "Message viewing policy" ON public.ticket_messages;
 CREATE POLICY "Message viewing policy" ON public.ticket_messages FOR SELECT USING (

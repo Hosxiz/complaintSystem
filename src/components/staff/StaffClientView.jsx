@@ -225,8 +225,19 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
       }
 
       // 2. ลบคำร้องออกจากตาราง tickets
-      const { error } = await supabase.from('tickets').delete().eq('id', ticketToDelete.id)
+      const { data, error } = await supabase
+        .from('tickets')
+        .delete()
+        .eq('id', ticketToDelete.id)
+        .select()
+
       if (error) throw error
+
+      if (!data || data.length === 0) {
+        throw new Error(
+          'ฐานข้อมูลไม่อนุญาตให้ลบ (ติด RLS Policy ใน Supabase) กรุณารันไฟล์ fix_ticket_delete_policy.sql ใน Supabase SQL Editor'
+        )
+      }
 
       // 3. อัปเดต UI ทันที
       setTickets((prev) => prev.filter((t) => t.id !== ticketToDelete.id))
