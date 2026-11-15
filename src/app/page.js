@@ -5,16 +5,75 @@
 // ==============================================================================
 import { useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { STATUS_CONFIG } from '@/lib/tickets/status-config'
+import TicketDiscussion from '@/components/tickets/TicketDiscussion'
+import ReopenTicketModal from '@/components/tickets/ReopenTicketModal'
 import {
   Search,
   Building2,
   Laptop,
   Users2,
   ArrowRight,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  RotateCcw,
+  Loader2,
 } from 'lucide-react'
 
 export default function Home() {
+  const supabase = createClient()
   const [searchQuery, setSearchQuery] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [searchResult, setSearchResult] = useState(null)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [showReopenModal, setShowReopenModal] = useState(false)
+
+  // ฟังก์ชันค้นหาและติดตามตั๋วแบบ Realtime จากหน้าแรก
+  const handleTrackSearch = async (e) => {
+    e.preventDefault()
+    if (!searchQuery.trim()) return
+
+    setLoading(true)
+    setErrorMsg('')
+    setSearchResult(null)
+
+    try {
+      const cleanKey = searchQuery.trim()
+
+      const { data, error } = await supabase
+        .from('tickets')
+        .select(`
+          id,
+          ticket_code,
+          tracking_code,
+          title,
+          description,
+          status,
+          created_at,
+          category:categories(name)
+        `)
+        .or(`ticket_code.eq.${cleanKey},tracking_code.eq.${cleanKey}`)
+        .maybeSingle()
+
+      if (error) throw error
+      if (!data) {
+        throw new Error(`ไม่พบข้อมูลเรื่องร้องเรียนสำหรับรหัส "${cleanKey}" กรุณาตรวจสอบรหัสตั๋วอีกครั้ง`)
+      }
+
+      setSearchResult(data)
+    } catch (err) {
+      setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการค้นหา')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const currentStatusInfo = searchResult
+    ? STATUS_CONFIG[searchResult.status] || STATUS_CONFIG.SUBMITTED
+    : null
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col justify-between selection:bg-teal-200">
@@ -71,9 +130,9 @@ export default function Home() {
               คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยสวนดุสิต
             </p>
 
-            {/* กล่องค้นหา (Search Box) */}
+            {/* กล่องค้นหาและติดตามรหัส (Search & Tracking Box) */}
             <form
-              onSubmit={(e) => e.preventDefault()}
+              onSubmit={handleTrackSearch}
               className="w-full max-w-xl mx-auto flex items-center bg-white rounded-lg shadow-2xl p-1.5 border border-white/40 focus-within:ring-4 focus-within:ring-teal-400/40 transition"
             >
               <div className="pl-3.5 text-slate-400">
@@ -83,16 +142,116 @@ export default function Home() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="พิมพ์ค้นหาคำถาม, หมวดหมู่, หรือรหัสเคส (เช่น TK-2026-XXXX)..."
+                placeholder="กรอกรหัสตั๋ว เช่น TK-2026-X8Y2 หรือ Tracking Code เพื่อติดตาม..."
                 className="w-full px-3 py-2.5 text-slate-800 text-sm placeholder:text-slate-400 focus:outline-none bg-transparent"
               />
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-[#00a884] hover:bg-[#008f70] text-white font-bold text-xs uppercase tracking-wider rounded-md transition shadow-md shrink-0"
+                disabled={loading}
+                className="px-6 py-2.5 bg-[#00a884] hover:bg-[#008f70] disabled:bg-teal-300 text-white font-bold text-xs uppercase tracking-wider rounded-md transition shadow-md shrink-0 flex items-center gap-1.5"
               >
-                Search
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>ค้นหา...</span>
+                  </>
+                ) : (
+                  <span>Search</span>
+                )}
               </button>
             </form>
+
+            {/* แจ้งเตือนข้อผิดพลาดถ้าไม่พบ */}
+            {errorMsg && (
+              <div className="max-w-xl mx-auto p-3 bg-red-600/90 backdrop-blur-md border border-red-400 text-white text-xs rounded-xl flex items-center justify-between gap-2 shadow-lg animate-in fade-in duration-200">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-200" />
+                  <span>{errorMsg}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setErrorMsg('')}
+                  className="p-1 hover:bg-white/20 rounded-lg text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* ผลลัพธ์การติดตามตั๋วแบบ Realtime บนหน้าแรก */}
+            {searchResult && currentStatusInfo && (
+              <div className="max-w-2xl w-full mx-auto bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 text-left space-y-5 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">
+                        {searchResult.ticket_code}
+                      </span>
+                      <span className="text-xs text-slate-400">•</span>
+                      <span className="text-xs font-semibold text-slate-500">
+                        {searchResult.category?.name || 'หมวดหมู่ทั่วไป'}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 mt-1">
+                      {searchResult.title}
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-3 py-1 rounded-full font-bold border ${currentStatusInfo.color}`}>
+                      {currentStatusInfo.label}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSearchResult(null)}
+                      className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+                      title="ปิดผลการค้นหา"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* คำอธิบายสถานะ */}
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-600 space-y-0.5">
+                  <span className="font-bold text-slate-800 block">สถานะปัจจุบัน:</span>
+                  <p>{currentStatusInfo.description}</p>
+                </div>
+
+                {/* รายละเอียด */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    รายละเอียดเรื่องที่แจ้ง:
+                  </h4>
+                  <div className="p-3.5 bg-slate-50/70 rounded-2xl border border-slate-100 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    {searchResult.description}
+                  </div>
+                </div>
+
+                {/* ปุ่มขอเปิดเรื่องใหม่ถ้า RESOLVED */}
+                {searchResult.status === 'RESOLVED' && (
+                  <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-xs text-amber-800">
+                      <span className="font-bold block">ยังพบปัญหาอยู่หรือไม่?</span>
+                      หากยังไม่เรียบร้อย สามารถกดขอเปิดเรื่องใหม่เพื่อให้เจ้าหน้าที่ตรวจสอบต่อได้
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowReopenModal(true)}
+                      className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>ขอเปิดเรื่องใหม่</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* กล่องแชทสนทนากับเจ้าหน้าที่ */}
+                <div className="pt-2 border-t border-slate-100">
+                  <TicketDiscussion ticketId={searchResult.id} currentRole="user" />
+                </div>
+              </div>
+            )}
 
 
           </div>
@@ -192,6 +351,16 @@ export default function Home() {
       <footer className="bg-white border-t border-slate-200 py-6 px-4 text-center text-xs text-slate-400">
         Copyright © 2026 Complaint Management System. All rights reserved.
       </footer>
+
+      {/* Modal ขอเปิดเรื่องใหม่เมื่อค้นหาเจอเรื่องที่เสร็จสิ้นแล้ว */}
+      {searchResult && (
+        <ReopenTicketModal
+          isOpen={showReopenModal}
+          ticket={searchResult}
+          onClose={() => setShowReopenModal(false)}
+          onSuccess={(updated) => setSearchResult(updated)}
+        />
+      )}
     </div>
   )
 }
