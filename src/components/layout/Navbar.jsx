@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   KeyRound,
   UserPen,
+  Home,
 } from 'lucide-react'
 
 export default function Navbar({ profile }) {
@@ -42,15 +43,17 @@ export default function Navbar({ profile }) {
       <nav className="bg-white border-b border-slate-200/80 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
+            {/* 🏠 โลโก้คลิกแล้วกลับสู่หน้าหลัก (Landing Page) */}
             <Link
-              href={role === 'staff' ? '/staff' : role === 'admin' ? '/admin' : '/dashboard'}
-              className="flex items-center gap-2.5"
+              href="/"
+              className="flex items-center gap-2.5 hover:opacity-90 transition group"
+              title="กลับสู่หน้าหลัก (Home)"
             >
-              <div className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-sm">
+              <div className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <span className="font-bold text-slate-800 text-sm tracking-tight block">
+                <span className="font-bold text-slate-800 text-sm tracking-tight block group-hover:text-blue-600 transition-colors">
                   Complaint System
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium block">
@@ -61,6 +64,14 @@ export default function Navbar({ profile }) {
 
             {/* 🚪 เมนูนำทางแบบแยกสิทธิ์ชัดเจน (Strict Role Separation) */}
             <div className="hidden md:flex items-center gap-1.5 pl-2 border-l border-slate-200">
+              {/* ปุ่มกลับหน้าหลัก */}
+              <Link
+                href="/"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition flex items-center gap-1.5"
+              >
+                <Home className="w-3.5 h-3.5" />
+                <span>หน้าหลัก</span>
+              </Link>
               
               {/* 1. เฉพาะ User ทั่วไป และ Admin เท่านั้นที่เห็นหน้าส่งเรื่อง (/dashboard) */}
               {role !== 'staff' && (
