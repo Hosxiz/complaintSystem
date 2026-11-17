@@ -7,12 +7,14 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { generateTicketCode, generateTrackingCode } from '@/lib/tickets/code-generator'
-import { Send, EyeOff, CheckCircle2, Copy, AlertCircle, Paperclip, X } from 'lucide-react'
+import { FACULTY_MAJORS } from '@/lib/constants/majors'
+import { Send, EyeOff, CheckCircle2, Copy, AlertCircle, Paperclip, X, GraduationCap } from 'lucide-react'
 
 export default function NewTicketForm({ categories = [] }) {
   const supabase = createClient()
 
   const [title, setTitle] = useState('')
+  const [major, setMajor] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [description, setDescription] = useState('')
   const [contactInfo, setContactInfo] = useState('')
@@ -51,30 +53,54 @@ export default function NewTicketForm({ categories = [] }) {
         throw new Error('กรุณาเข้าสู่ระบบก่อนส่งเรื่องร้องเรียน')
       }
 
-      // 2. เสก Ticket Code และ Tracking Code
+      // 2. ตรวจสอบความถูกต้องของข้อมูล
+      if (!major.trim()) {
+        throw new Error('กรุณาเลือกสาขาวิชาที่เกี่ยวข้อง')
+      }
+
+      // 3. เสก Ticket Code และ Tracking Code
       const ticketCode = generateTicketCode()
       const trackingCode = generateTrackingCode()
 
-      // 3. รวมช่องทางติดต่อเพิ่มเติม (ถ้ามี) เข้ากับเนื้อหา
-      const fullDescription = contactInfo.trim()
-        ? `${description.trim()}\n\n📞 ช่องทางติดต่อเพิ่มเติม: ${contactInfo.trim()}`
-        : description.trim()
+      // 4. จัดรูปแบบเนื้อหาคำร้อง รวมสาขาวิชา และช่องทางติดต่อ
+      const majorText = `🎓 สาขาวิชา: ${major}`
+      const contactText = contactInfo.trim() ? `\n📞 ช่องทางติดต่อเพิ่มเติม: ${contactInfo.trim()}` : ''
+      const fullDescription = `${majorText}\n\n${description.trim()}${contactText}`
 
-      // 4. บันทึกตั๋วลง Database
-      const { data: ticket, error: ticketError } = await supabase
+      // 5. บันทึกตั๋วลง Database (พร้อมรองรับ fallback หากยังไม่มีคอลัมน์ major)
+      const ticketPayload = {
+        ticket_code: ticketCode,
+        tracking_code: trackingCode,
+        user_id: user.id,
+        category_id: categoryId || null,
+        title: title.trim(),
+        description: fullDescription,
+        is_anonymous: isAnonymous,
+        status: 'SUBMITTED',
+      }
+
+      let ticket = null
+      let ticketError = null
+
+      const resWithMajor = await supabase
         .from('tickets')
-        .insert({
-          ticket_code: ticketCode,
-          tracking_code: trackingCode,
-          user_id: user.id,
-          category_id: categoryId || null,
-          title: title.trim(),
-          description: fullDescription,
-          is_anonymous: isAnonymous,
-          status: 'SUBMITTED',
-        })
+        .insert({ ...ticketPayload, major: major.trim() })
         .select()
         .single()
+
+      if (resWithMajor.error && resWithMajor.error.message?.includes('major')) {
+        // Fallback กรณีตาราง tickets ใน Supabase ยังไม่ได้รันคำสั่งเพิ่มคอลัมน์ major
+        const resFallback = await supabase
+          .from('tickets')
+          .insert(ticketPayload)
+          .select()
+          .single()
+        ticket = resFallback.data
+        ticketError = resFallback.error
+      } else {
+        ticket = resWithMajor.data
+        ticketError = resWithMajor.error
+      }
 
       if (ticketError) throw ticketError
 
@@ -162,6 +188,8 @@ export default function NewTicketForm({ categories = [] }) {
           onClick={() => {
             setSuccessData(null)
             setTitle('')
+            setMajor('')
+            setCategoryId('')
             setDescription('')
             setContactInfo('')
             setSelectedFile(null)
@@ -203,6 +231,31 @@ export default function NewTicketForm({ categories = [] }) {
             placeholder="เช่น แอร์ห้อง 401 เปิดไม่ติด, ก๊อกน้ำรั่ว"
             className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+        </div>
+
+        {/* 🎓 สาขาวิชาที่เกี่ยวข้อง (บังคับเลือก *) */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+              <span>สาขาวิชา</span>
+              <span className="text-red-500 font-bold">*</span>
+            </span>
+            <span className="text-[10px] text-slate-400 font-normal">คณะวิทย์ฯ สวนดุสิต</span>
+          </label>
+          <select
+            required
+            value={major}
+            onChange={(e) => setMajor(e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+          >
+            <option value="">-- กรุณาเลือกสาขาวิชา (บังคับ) --</option>
+            {FACULTY_MAJORS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

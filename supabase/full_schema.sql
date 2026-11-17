@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS public.tickets (
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     assigned_staff_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+    major TEXT,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     is_anonymous BOOLEAN NOT NULL DEFAULT FALSE,
