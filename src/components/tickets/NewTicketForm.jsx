@@ -19,6 +19,7 @@ export default function NewTicketForm({ categories = [] }) {
   const [description, setDescription] = useState('')
   const [contactInfo, setContactInfo] = useState('')
   const [isAnonymous, setIsAnonymous] = useState(false)
+  const [isCertified, setIsCertified] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
 
   const [loading, setLoading] = useState(false)
@@ -56,6 +57,10 @@ export default function NewTicketForm({ categories = [] }) {
       // 2. ตรวจสอบความถูกต้องของข้อมูล
       if (!major.trim()) {
         throw new Error('กรุณาเลือกสาขาวิชาที่เกี่ยวข้อง')
+      }
+
+      if (!isCertified) {
+        throw new Error('กรุณากดยอมรับว่าข้อมูลและเรื่องที่ร้องเรียนเป็นความจริงทุกประการก่อนส่ง')
       }
 
       // 3. เสก Ticket Code และ Tracking Code
@@ -194,6 +199,7 @@ export default function NewTicketForm({ categories = [] }) {
             setContactInfo('')
             setSelectedFile(null)
             setIsAnonymous(false)
+            setIsCertified(false)
             window.location.reload()
           }}
           className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition"
@@ -360,10 +366,39 @@ export default function NewTicketForm({ categories = [] }) {
           </label>
         </div>
 
+        {/* ⚖️ ข้อตกลงยืนยันความถูกต้องของข้อมูล (Mandatory Certification) */}
+        <div
+          className={`p-3.5 rounded-xl border transition-all ${
+            isCertified
+              ? 'bg-blue-50/70 border-blue-200 text-blue-900'
+              : 'bg-amber-50/70 border-amber-200 text-amber-900'
+          }`}
+        >
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              required
+              checked={isCertified}
+              onChange={(e) => setIsCertified(e.target.checked)}
+              className="mt-0.5 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 shrink-0 cursor-pointer"
+            />
+            <div className="space-y-0.5">
+              <span className="font-bold text-xs block leading-tight">
+                ข้าพเจ้าขอยืนยันว่าเรื่องที่ร้องเรียนนี้ เป็นความจริงทุกประการ{' '}
+                <span className="text-red-500">*</span>
+              </span>
+              <p className="text-[11px] opacity-80 leading-normal">
+                หากพบว่าเป็นการจงใจแจ้งข้อมูลเท็จ บิดเบือน หรือมีเจตนากลั่นแกล้งผู้อื่น
+                อาจมีความผิดตามระเบียบและกฎหมายที่เกี่ยวข้อง
+              </p>
+            </div>
+          </label>
+        </div>
+
         <button
           type="submit"
-          disabled={loading}
-          className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition shadow-sm"
+          disabled={loading || !isCertified}
+          className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition shadow-sm"
         >
           <Send className="w-3.5 h-3.5" />
           {loading ? 'กำลังส่งข้อมูล...' : 'ส่งเรื่องร้องเรียน'}
