@@ -4,10 +4,13 @@
 // 👑 Admin Dashboard Client Component (Refined Tasklify Pro Style)
 // สไตล์ Executive Dashboard: การ์ด KPI 4 ช่อง, แท็บสลับหน้าจอ (คิวงาน / หมวดหมู่ / สิทธิ์ผู้ใช้)
 // ==============================================================================
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import AdminTicketQueue from '@/components/admin/AdminTicketQueue'
 import CategoryManager from '@/components/admin/CategoryManager'
 import UserRoleManager from '@/components/admin/UserRoleManager'
+import DateFilterBurgerDrawer from '@/components/dashboard/DateFilterBurgerDrawer'
+import TrendAnalyticsSection from '@/components/dashboard/TrendAnalyticsSection'
+import { filterTicketsByDate } from '@/lib/utils/date-filter'
 import {
   ShieldCheck,
   Users,
@@ -30,15 +33,22 @@ export default function AdminDashboardClient({
   adminProfile,
 }) {
   const [activeTab, setActiveTab] = useState('tickets') // 'tickets' | 'categories' | 'roles'
+  const [dateFilter, setDateFilter] = useState('ALL')
+  const [customRange, setCustomRange] = useState({ start: '', end: '' })
 
-  const totalTickets = initialTickets.length
-  const pendingTickets = initialTickets.filter((t) =>
+  // 🍔 กรองคำร้องตามช่วงเวลา (Burger Drawer Date Filter)
+  const filteredTickets = useMemo(() => {
+    return filterTicketsByDate(initialTickets, dateFilter, customRange)
+  }, [initialTickets, dateFilter, customRange])
+
+  const totalTickets = filteredTickets.length
+  const pendingTickets = filteredTickets.filter((t) =>
     ['SUBMITTED', 'RECEIVED'].includes(t.status)
   ).length
-  const inProgressTickets = initialTickets.filter((t) =>
+  const inProgressTickets = filteredTickets.filter((t) =>
     ['IN_PROGRESS', 'WAITING'].includes(t.status)
   ).length
-  const resolvedTickets = initialTickets.filter((t) =>
+  const resolvedTickets = filteredTickets.filter((t) =>
     ['RESOLVED', 'CLOSED'].includes(t.status)
   ).length
   const totalStaff = initialProfiles.filter((p) => p.role === 'staff').length
@@ -46,7 +56,7 @@ export default function AdminDashboardClient({
     totalTickets > 0 ? Math.round((resolvedTickets / totalTickets) * 100) : 0
 
   // ⭐ คำนวณความพึงพอใจการให้บริการเฉลี่ยทั้งระบบ และแยกตามแต่ละหมวดหมู่
-  const ratedTickets = initialTickets.filter((t) => t.rating && Number(t.rating) > 0)
+  const ratedTickets = filteredTickets.filter((t) => t.rating && Number(t.rating) > 0)
   const overallAvgRating =
     ratedTickets.length > 0
       ? (
@@ -56,7 +66,7 @@ export default function AdminDashboardClient({
       : null
 
   const categorySatisfaction = initialCategories.map((cat) => {
-    const catTickets = initialTickets.filter(
+    const catTickets = filteredTickets.filter(
       (t) => t.category_id === cat.id || t.category?.name === cat.name
     )
     const catRated = catTickets.filter((t) => t.rating && Number(t.rating) > 0)
@@ -97,17 +107,27 @@ export default function AdminDashboardClient({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start md:self-auto bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-500/20">
-            {adminProfile?.full_name?.slice(0, 2).toUpperCase() || 'AD'}
-          </div>
-          <div className="pr-2">
-            <span className="text-xs font-bold text-slate-800 block">
-              {adminProfile?.full_name || 'ผู้ดูแลระบบ'}
-            </span>
-            <span className="text-[11px] text-emerald-600 font-semibold block">
-              ● ผู้ดูแลระบบสูงสุด (Super Admin)
-            </span>
+        <div className="flex items-center gap-2.5 self-start md:self-auto">
+          {/* 🍔 ตัวกรองวันที่แบบ Slide-over Drawer Burger Menu */}
+          <DateFilterBurgerDrawer
+            activeFilter={dateFilter}
+            onSelectFilter={setDateFilter}
+            customRange={customRange}
+            onCustomRangeChange={setCustomRange}
+          />
+
+          <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-500/20">
+              {adminProfile?.full_name?.slice(0, 2).toUpperCase() || 'AD'}
+            </div>
+            <div className="pr-2">
+              <span className="text-xs font-bold text-slate-800 block">
+                {adminProfile?.full_name || 'ผู้ดูแลระบบ'}
+              </span>
+              <span className="text-[11px] text-emerald-600 font-semibold block">
+                ● ผู้ดูแลระบบสูงสุด (Super Admin)
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -241,6 +261,11 @@ export default function AdminDashboardClient({
       </div>
 
       {/* ============================================================================== */}
+      {/* 2.7 กราฟแนวโน้มและการกระจายตัว (Trend Charts & Visual Analytics - Option 2)       */}
+      {/* ============================================================================== */}
+      <TrendAnalyticsSection tickets={filteredTickets} />
+
+      {/* ============================================================================== */}
       {/* 3. แท็บสลับหน้าจอ (Segmented Tabs Controller)                                    */}
       {/* ============================================================================== */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
@@ -254,7 +279,7 @@ export default function AdminDashboardClient({
             }`}
           >
             <Inbox className="w-4 h-4" />
-            <span>คิวคัดกรองคำร้อง ({initialTickets.length})</span>
+            <span>คิวคัดกรองคำร้อง ({filteredTickets.length})</span>
           </button>
 
           <button
@@ -294,7 +319,7 @@ export default function AdminDashboardClient({
         {activeTab === 'tickets' && (
           <div className="animate-in fade-in duration-200">
             <AdminTicketQueue
-              initialTickets={initialTickets}
+              initialTickets={filteredTickets}
               categories={initialCategories}
             />
           </div>

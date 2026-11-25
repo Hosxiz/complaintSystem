@@ -9,6 +9,9 @@ import { useState, useMemo, useEffect } from 'react'
 import { STATUS_CONFIG } from '@/lib/tickets/status-config'
 import StaffStatusSelector from '@/components/staff/StaffStatusSelector'
 import TicketDiscussion from '@/components/tickets/TicketDiscussion'
+import DateFilterBurgerDrawer from '@/components/dashboard/DateFilterBurgerDrawer'
+import TrendAnalyticsSection from '@/components/dashboard/TrendAnalyticsSection'
+import { filterTicketsByDate } from '@/lib/utils/date-filter'
 import { createClient } from '@/lib/supabase/client'
 import {
   Kanban,
@@ -43,6 +46,8 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
   const [viewMode, setViewMode] = useState('kanban') // 'kanban' หรือ 'list'
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('ALL')
+  const [dateFilter, setDateFilter] = useState('ALL')
+  const [customRange, setCustomRange] = useState({ start: '', end: '' })
 
   // States สำหรับระบบลบคำร้อง & บันทึกประวัติ
   const [ticketToDelete, setTicketToDelete] = useState(null)
@@ -52,28 +57,33 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
   const [deletionLogs, setDeletionLogs] = useState([])
   const [loadingLogs, setLoadingLogs] = useState(false)
 
+  // 🍔 กรองคำร้องตามช่วงเวลา (Burger Drawer Date Filter)
+  const dateFilteredTickets = useMemo(() => {
+    return filterTicketsByDate(tickets, dateFilter, customRange)
+  }, [tickets, dateFilter, customRange])
+
   // คำนวณสถิติภาพรวม (KPI Stats เหมือนใน Ref)
   const stats = useMemo(() => {
-    const total = tickets.length
-    const pending = tickets.filter((t) => t.status === 'SUBMITTED' || t.status === 'RECEIVED').length
-    const inProgress = tickets.filter((t) => t.status === 'IN_PROGRESS').length
-    const waiting = tickets.filter((t) => t.status === 'WAITING').length
-    const resolved = tickets.filter((t) => t.status === 'RESOLVED' || t.status === 'CLOSED').length
+    const total = dateFilteredTickets.length
+    const pending = dateFilteredTickets.filter((t) => t.status === 'SUBMITTED' || t.status === 'RECEIVED').length
+    const inProgress = dateFilteredTickets.filter((t) => t.status === 'IN_PROGRESS').length
+    const waiting = dateFilteredTickets.filter((t) => t.status === 'WAITING').length
+    const resolved = dateFilteredTickets.filter((t) => t.status === 'RESOLVED' || t.status === 'CLOSED').length
     const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0
 
     return { total, pending, inProgress, waiting, resolved, resolutionRate }
-  }, [tickets])
+  }, [dateFilteredTickets])
 
   // ⭐ คำนวณความพึงพอใจเฉลี่ยและแยกตามแต่ละหมวดหมู่
   const satisfactionData = useMemo(() => {
-    const rated = tickets.filter((t) => t.rating && Number(t.rating) > 0)
+    const rated = dateFilteredTickets.filter((t) => t.rating && Number(t.rating) > 0)
     const avg =
       rated.length > 0
         ? (rated.reduce((sum, t) => sum + Number(t.rating), 0) / rated.length).toFixed(1)
         : null
 
     const catMap = {}
-    tickets.forEach((t) => {
+    dateFilteredTickets.forEach((t) => {
       const catName = t.category?.name || 'ทั่วไป'
       if (!catMap[catName]) {
         catMap[catName] = { name: catName, total: 0, ratedCount: 0, ratingSum: 0 }
@@ -95,20 +105,20 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
       overallAvg: avg,
       totalRated: rated.length,
     }
-  }, [tickets])
+  }, [dateFilteredTickets])
 
   // ดึงรายชื่อหมวดหมู่ทั้งหมดสำหรับทำตัวกรอง
   const categoriesList = useMemo(() => {
     const cats = new Set()
-    tickets.forEach((t) => {
+    dateFilteredTickets.forEach((t) => {
       if (t.category?.name) cats.add(t.category.name)
     })
     return Array.from(cats)
-  }, [tickets])
+  }, [dateFilteredTickets])
 
   // กรองตั๋วตามการค้นหาและหมวดหมู่
   const filteredTickets = useMemo(() => {
-    return tickets.filter((t) => {
+    return dateFilteredTickets.filter((t) => {
       const matchSearch =
         searchQuery.trim() === '' ||
         t.ticket_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -119,7 +129,7 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
 
       return matchSearch && matchCategory
     })
-  }, [tickets, searchQuery, selectedCategory])
+  }, [dateFilteredTickets, searchQuery, selectedCategory])
 
   // คอลัมน์สำหรับกระดาน Kanban 4 สถานะหลัก
   const kanbanColumns = [
@@ -309,6 +319,14 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+          {/* 🍔 ตัวกรองวันที่แบบ Slide-over Drawer Burger Menu */}
+          <DateFilterBurgerDrawer
+            activeFilter={dateFilter}
+            onSelectFilter={setDateFilter}
+            customRange={customRange}
+            onCustomRangeChange={setCustomRange}
+          />
+
           {/* ปุ่มสลับมุมมอง */}
           <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/70">
             <button
@@ -453,6 +471,11 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
           ))}
         </div>
       </div>
+
+      {/* ============================================================================== */}
+      {/* 2.7 กราฟแนวโน้มและการกระจายตัว (Trend Charts & Visual Analytics - Option 2)       */}
+      {/* ============================================================================== */}
+      <TrendAnalyticsSection tickets={dateFilteredTickets} />
 
       {/* ============================================================================== */}
       {/* 3. กล่องค้นหา, ตัวกรองหมวดหมู่, ปุ่มส่งออกรายงาน และปุ่มประวัติการลบ              */}
