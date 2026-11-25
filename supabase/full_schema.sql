@@ -63,6 +63,9 @@ CREATE TABLE IF NOT EXISTS public.tickets (
     description TEXT NOT NULL,
     is_anonymous BOOLEAN NOT NULL DEFAULT FALSE,
     status ticket_status NOT NULL DEFAULT 'SUBMITTED',
+    rating INT CHECK (rating >= 1 AND rating <= 5),
+    rating_feedback TEXT,
+    rated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );

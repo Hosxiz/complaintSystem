@@ -45,6 +45,9 @@ export default async function StaffPage() {
       is_anonymous,
       assigned_staff_id,
       created_at,
+      rating,
+      rating_feedback,
+      rated_at,
       category:categories(name),
       complainant:profiles!tickets_user_id_fkey(full_name, email),
       attachments:ticket_attachments(id, file_name, file_url, mime_type, file_size_bytes)

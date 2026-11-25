@@ -33,6 +33,7 @@ import {
   FileSpreadsheet,
   AlertTriangle,
   Loader2,
+  Star,
 } from 'lucide-react'
 
 export default function StaffClientView({ initialTickets = [], staffProfile }) {
@@ -61,6 +62,39 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
     const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0
 
     return { total, pending, inProgress, waiting, resolved, resolutionRate }
+  }, [tickets])
+
+  // ⭐ คำนวณความพึงพอใจเฉลี่ยและแยกตามแต่ละหมวดหมู่
+  const satisfactionData = useMemo(() => {
+    const rated = tickets.filter((t) => t.rating && Number(t.rating) > 0)
+    const avg =
+      rated.length > 0
+        ? (rated.reduce((sum, t) => sum + Number(t.rating), 0) / rated.length).toFixed(1)
+        : null
+
+    const catMap = {}
+    tickets.forEach((t) => {
+      const catName = t.category?.name || 'ทั่วไป'
+      if (!catMap[catName]) {
+        catMap[catName] = { name: catName, total: 0, ratedCount: 0, ratingSum: 0 }
+      }
+      catMap[catName].total += 1
+      if (t.rating && Number(t.rating) > 0) {
+        catMap[catName].ratedCount += 1
+        catMap[catName].ratingSum += Number(t.rating)
+      }
+    })
+
+    const catList = Object.values(catMap).map((c) => ({
+      ...c,
+      avgRating: c.ratedCount > 0 ? (c.ratingSum / c.ratedCount).toFixed(1) : null,
+    }))
+
+    return {
+      categoryList: catList,
+      overallAvg: avg,
+      totalRated: rated.length,
+    }
   }, [tickets])
 
   // ดึงรายชื่อหมวดหมู่ทั้งหมดสำหรับทำตัวกรอง
@@ -364,6 +398,59 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
             </div>
             <div className="text-xs text-slate-500 mt-0.5">อัตราการปิดเรื่องสำเร็จ</div>
           </div>
+        </div>
+      </div>
+
+      {/* ============================================================================== */}
+      {/* 2.5 สรุปความพึงพอใจการให้บริการแยกตามหมวดหมู่ (Category Satisfaction)            */}
+      {/* ============================================================================== */}
+      <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+          <div className="flex items-center gap-2">
+            <Star className="w-5 h-5 text-amber-500 fill-amber-400" />
+            <h3 className="font-extrabold text-slate-900 text-sm">
+              ความพึงพอใจการให้บริการแยกตามแต่ละหมวดหมู่ (Satisfaction by Category)
+            </h3>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto bg-amber-50 px-3 py-1 rounded-xl border border-amber-200/70">
+            <span className="text-xs font-semibold text-amber-800">คะแนนเฉลี่ยรวม:</span>
+            <span className="text-sm font-black text-amber-600">
+              {satisfactionData.overallAvg ? `⭐ ${satisfactionData.overallAvg} / 5.0` : 'ยังไม่มีการประเมิน'}
+            </span>
+            <span className="text-[10px] text-amber-700 font-medium">
+              ({satisfactionData.totalRated} เคส)
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {satisfactionData.categoryList.map((cat) => (
+            <div
+              key={cat.name}
+              className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/70 space-y-2 hover:bg-slate-50 transition"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-slate-800 truncate" title={cat.name}>
+                  {cat.name}
+                </span>
+                <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-amber-600">
+                  {cat.avgRating ? `⭐ ${cat.avgRating} / 5` : 'รอประเมิน'}
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-amber-400 h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: cat.avgRating ? `${(Number(cat.avgRating) / 5) * 100}%` : '0%',
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-slate-500">
+                <span>ประเมินแล้ว: <b>{cat.ratedCount}</b></span>
+                <span>ทั้งหมด: <b>{cat.total}</b> เคส</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -701,6 +788,38 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
                   onStatusChanged={handleStatusChange}
                 />
               </div>
+
+              {/* ⭐ ความพึงพอใจจากผู้ร้องเรียน (ถ้ามี) */}
+              {selectedTicket.rating && (
+                <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50/50 rounded-2xl border border-amber-200/90 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                      <span>คะแนนประเมินการบริการ:</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          className={`w-3.5 h-3.5 ${
+                            s <= selectedTicket.rating
+                              ? 'text-amber-500 fill-amber-400'
+                              : 'text-slate-200'
+                          }`}
+                        />
+                      ))}
+                      <span className="text-xs font-black text-amber-800 ml-1">
+                        {selectedTicket.rating} / 5
+                      </span>
+                    </div>
+                  </div>
+                  {selectedTicket.rating_feedback && (
+                    <div className="p-2.5 bg-white/90 rounded-xl border border-amber-100 text-xs text-slate-700 italic">
+                      "{selectedTicket.rating_feedback}"
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* 🗑️ กล่องลบคำร้องที่เสร็จแล้ว (เฉพาะ RESOLVED หรือ CLOSED เท่านั้น!) */}
               {(selectedTicket.status === 'RESOLVED' || selectedTicket.status === 'CLOSED') && (

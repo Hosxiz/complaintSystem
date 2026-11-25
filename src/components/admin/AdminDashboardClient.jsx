@@ -19,6 +19,7 @@ import {
   UserCog,
   CheckCircle2,
   Sparkles,
+  Star,
 } from 'lucide-react'
 
 export default function AdminDashboardClient({
@@ -43,6 +44,37 @@ export default function AdminDashboardClient({
   const totalStaff = initialProfiles.filter((p) => p.role === 'staff').length
   const resolutionRate =
     totalTickets > 0 ? Math.round((resolvedTickets / totalTickets) * 100) : 0
+
+  // ⭐ คำนวณความพึงพอใจการให้บริการเฉลี่ยทั้งระบบ และแยกตามแต่ละหมวดหมู่
+  const ratedTickets = initialTickets.filter((t) => t.rating && Number(t.rating) > 0)
+  const overallAvgRating =
+    ratedTickets.length > 0
+      ? (
+          ratedTickets.reduce((sum, t) => sum + Number(t.rating), 0) /
+          ratedTickets.length
+        ).toFixed(1)
+      : null
+
+  const categorySatisfaction = initialCategories.map((cat) => {
+    const catTickets = initialTickets.filter(
+      (t) => t.category_id === cat.id || t.category?.name === cat.name
+    )
+    const catRated = catTickets.filter((t) => t.rating && Number(t.rating) > 0)
+    const avg =
+      catRated.length > 0
+        ? (
+            catRated.reduce((sum, t) => sum + Number(t.rating), 0) /
+            catRated.length
+          ).toFixed(1)
+        : null
+    return {
+      id: cat.id,
+      name: cat.name,
+      totalCount: catTickets.length,
+      ratedCount: catRated.length,
+      avgRating: avg ? parseFloat(avg) : null,
+    }
+  })
 
   return (
     <div className="space-y-6 font-sans">
@@ -143,6 +175,68 @@ export default function AdminDashboardClient({
             </div>
             <div className="text-xs text-slate-500 mt-0.5">เป้าหมายความพึงพอใจการแก้ไข</div>
           </div>
+        </div>
+      </div>
+
+      {/* ============================================================================== */}
+      {/* 2.5 สรุปความพึงพอใจการให้บริการแยกตามแต่ละหมวดหมู่ (Category Satisfaction)       */}
+      {/* ============================================================================== */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <Star className="w-5 h-5 text-amber-500 fill-amber-400" />
+              <h3 className="font-extrabold text-slate-900 text-sm sm:text-base">
+                ความพึงพอใจการให้บริการแยกตามแต่ละหมวดหมู่ (Satisfaction by Category)
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500">
+              คะแนนประเมินการทำงานของเจ้าหน้าที่จากผู้ร้องเรียนที่ได้รับการแก้ไขเสร็จสิ้นแล้ว
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200/80">
+            <span className="text-xs font-semibold text-amber-800">คะแนนเฉลี่ยรวม:</span>
+            <span className="text-base font-black text-amber-600">
+              {overallAvgRating ? `⭐ ${overallAvgRating} / 5.0` : 'ยังไม่มีการประเมิน'}
+            </span>
+            <span className="text-[10px] text-amber-700 font-medium">
+              ({ratedTickets.length} เคส)
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {categorySatisfaction.map((cat) => (
+            <div
+              key={cat.id}
+              className="p-4 bg-slate-50/70 hover:bg-slate-50 rounded-2xl border border-slate-200/70 transition space-y-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-slate-800 truncate" title={cat.name}>
+                  {cat.name}
+                </span>
+                <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-amber-600">
+                  {cat.avgRating ? `⭐ ${cat.avgRating} / 5` : 'รอประเมิน'}
+                </span>
+              </div>
+
+              {/* Progress bar แสดงความพึงพอใจเทียบกับ 5 ดาว */}
+              <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-amber-400 h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: cat.avgRating ? `${(cat.avgRating / 5) * 100}%` : '0%',
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span>ได้รับการประเมิน: <b>{cat.ratedCount}</b> เรื่อง</span>
+                <span>เรื่องทั้งหมด: <b>{cat.totalCount}</b></span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

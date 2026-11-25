@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { STATUS_CONFIG } from '@/lib/tickets/status-config'
 import TicketDiscussion from '@/components/tickets/TicketDiscussion'
+import TicketRatingWidget from '@/components/tickets/TicketRatingWidget'
 import { createClient } from '@/lib/supabase/client'
 import {
   Inbox,
@@ -166,6 +167,19 @@ export default function UserTicketList({ initialTickets = [] }) {
                   {selectedTicket.description}
                 </div>
               </div>
+
+              {/* ⭐ กล่องประเมินความพึงพอใจการให้บริการ */}
+              {['RESOLVED', 'CLOSED'].includes(selectedTicket.status) && (
+                <TicketRatingWidget
+                  ticket={selectedTicket}
+                  onRated={(updatedTicket) => {
+                    setSelectedTicket(updatedTicket)
+                    setTickets((prev) =>
+                      prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
+                    )
+                  }}
+                />
+              )}
 
               {/* Discussion & Chat Box (Public Channel) */}
               <div className="pt-2 border-t border-slate-100">

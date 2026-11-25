@@ -32,7 +32,7 @@ export default async function AdminPage() {
 
   if (user) {
     const { data: t } = await supabase.from('tickets').select(`
-      id, ticket_code, title, description, status, is_anonymous, category_id, created_at, category:categories(name), complainant:profiles!tickets_user_id_fkey(full_name, email)
+      id, ticket_code, title, description, status, is_anonymous, category_id, created_at, rating, rating_feedback, rated_at, category:categories(name), complainant:profiles!tickets_user_id_fkey(full_name, email)
     `).order('created_at', { ascending: false })
     if (t) tickets = t
 

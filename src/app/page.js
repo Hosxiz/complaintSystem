@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_CONFIG } from '@/lib/tickets/status-config'
 import TicketDiscussion from '@/components/tickets/TicketDiscussion'
+import TicketRatingWidget from '@/components/tickets/TicketRatingWidget'
 import {
   Search,
   Building2,
@@ -50,6 +51,9 @@ export default function Home() {
           description,
           status,
           created_at,
+          rating,
+          rating_feedback,
+          rated_at,
           category:categories(name)
         `)
         .or(`ticket_code.eq.${cleanKey},tracking_code.eq.${cleanKey}`)
@@ -228,6 +232,14 @@ export default function Home() {
                     {searchResult.description}
                   </div>
                 </div>
+
+                {/* ⭐ ประเมินความพึงพอใจการให้บริการเมื่อเคสเสร็จสิ้น */}
+                {['RESOLVED', 'CLOSED'].includes(searchResult.status) && (
+                  <TicketRatingWidget
+                    ticket={searchResult}
+                    onRated={(updatedTicket) => setSearchResult(updatedTicket)}
+                  />
+                )}
 
                 {/* กล่องแชทสนทนากับเจ้าหน้าที่ */}
                 <div className="pt-2 border-t border-slate-100">

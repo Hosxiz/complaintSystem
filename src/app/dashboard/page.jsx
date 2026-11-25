@@ -45,6 +45,9 @@ export default async function UserDashboard() {
         status,
         is_anonymous,
         created_at,
+        rating,
+        rating_feedback,
+        rated_at,
         category:categories(name),
         attachments:ticket_attachments(id, file_name, file_url, mime_type, file_size_bytes)
       `)
