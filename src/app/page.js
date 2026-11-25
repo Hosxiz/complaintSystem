@@ -334,10 +334,11 @@ export default function Home() {
               </p>
             </div>
             <Link
-              href="/dashboard"
-              className="px-6 py-3 bg-[#0052cc] hover:bg-[#0041a8] text-white text-xs font-bold rounded-xl shadow-md transition shrink-0"
+              href="/login"
+              className="px-6 py-3 bg-[#0052cc] hover:bg-[#0041a8] text-white text-xs font-bold rounded-xl shadow-md transition shrink-0 flex items-center justify-center gap-1.5"
             >
-              เริ่มต้นส่งเรื่องร้องเรียนทันที
+              <span>เริ่มต้นส่งเรื่องร้องเรียนทันที</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </section>
