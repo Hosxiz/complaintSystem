@@ -1,19 +1,18 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Prompt } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const promptFont = Prompt({
+  weight: ["300", "400", "500", "600", "700"],
+  subsets: ["thai", "latin"],
+  variable: "--font-prompt",
 });
 
 export const metadata = {
-  title: "ระบบรับเรื่องร้องเรียน (Complaint Management System)",
-  description: "ระบบบริหารจัดการเรื่องร้องเรียนระดับองค์กร",
+  title: "SCI-TECH VOICE - ระบบรับเรื่องร้องเรียน คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยสวนดุสิต",
+  description: "ระบบบริหารจัดการและติดตามเรื่องร้องเรียน คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยสวนดุสิต",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }) {
@@ -23,7 +22,7 @@ export default function RootLayout({ children }) {
         {/* Tailwind CSS CDN fallback เพื่อให้สไตล์ทำงาน 100% บนทุกสภาพแวดล้อม Windows */}
         <script src="https://cdn.tailwindcss.com"></script>
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${promptFont.className} antialiased`}>
         {children}
       </body>
     </html>

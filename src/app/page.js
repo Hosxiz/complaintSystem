@@ -81,15 +81,19 @@ export default function Home() {
         <header className="bg-[#0052cc] text-white sticky top-0 z-50 shadow-md">
           <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center gap-2">
-                <span className="text-xl sm:text-2xl font-black tracking-tight uppercase text-white">
-                  Complaint<span className="text-teal-300">Sys</span>
-                </span>
+              <Link href="/" className="flex items-center gap-2.5 group">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-md p-1 group-hover:scale-105 transition-transform">
+                  <img src="/logo.png" alt="SCI-TECH Logo" className="w-full h-full object-contain" />
+                </div>
+                <div>
+                  <span className="text-lg sm:text-xl font-black tracking-tight uppercase text-white block leading-tight">
+                    SCI-TECH <span className="text-teal-300">VOICE</span>
+                  </span>
+                  <span className="text-[10px] text-blue-200 block font-normal leading-tight">
+                    คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยสวนดุสิต
+                  </span>
+                </div>
               </Link>
-              <span className="hidden sm:inline-block h-5 w-[1px] bg-blue-300/40" />
-              <span className="hidden sm:inline-block text-xs font-semibold uppercase tracking-wider text-blue-100">
-                SDU SCI-TECH
-              </span>
             </div>
 
             <div className="flex items-center gap-3 sm:gap-4">
@@ -328,7 +332,7 @@ export default function Home() {
       </div>
 
       <footer className="bg-white border-t border-slate-200 py-6 px-4 text-center text-xs text-slate-400">
-        Copyright © 2026 Complaint Management System. All rights reserved.
+        Copyright © 2026 SCI-TECH VOICE คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยสวนดุสิต. All rights reserved.
       </footer>
     </div>
   )

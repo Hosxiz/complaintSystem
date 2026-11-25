@@ -368,11 +368,10 @@ export default function NewTicketForm({ categories = [] }) {
 
         {/* ⚖️ ข้อตกลงยืนยันความถูกต้องของข้อมูล (Mandatory Certification) */}
         <div
-          className={`p-3.5 rounded-xl border transition-all ${
-            isCertified
+          className={`p-3.5 rounded-xl border transition-all ${isCertified
               ? 'bg-blue-50/70 border-blue-200 text-blue-900'
               : 'bg-amber-50/70 border-amber-200 text-amber-900'
-          }`}
+            }`}
         >
           <label className="flex items-start gap-2.5 cursor-pointer select-none">
             <input

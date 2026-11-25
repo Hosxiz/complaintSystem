@@ -44,17 +44,17 @@ export default function Navbar({ profile }) {
           <div className="flex items-center gap-6">
             <Link
               href={role === 'staff' ? '/staff' : role === 'admin' ? '/admin' : '/dashboard'}
-              className="flex items-center gap-2.5"
+              className="flex items-center gap-2.5 group"
             >
-              <div className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-sm">
-                <ShieldCheck className="w-5 h-5" />
+              <div className="w-10 h-10 bg-white border border-slate-200/80 rounded-xl flex items-center justify-center shadow-sm overflow-hidden p-1 group-hover:scale-105 transition-transform">
+                <img src="/logo.png" alt="SCI-TECH Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <span className="font-bold text-slate-800 text-sm tracking-tight block">
-                  Complaint System
+                <span className="font-extrabold text-slate-800 text-sm tracking-tight block">
+                  SCI-TECH <span className="text-blue-600 font-black">VOICE</span>
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium block">
-                  ระบบรับเรื่องร้องเรียน
+                  คณะวิทยาศาสตร์และเทคโนโลยี
                 </span>
               </div>
             </Link>

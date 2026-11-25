@@ -18,6 +18,10 @@ export default function LoginPage() {
   // 'signin' หรือ 'signup'
   const [mode, setMode] = useState('signin')
 
+  // Verify email prompt modal state
+  const [showVerifyEmailModal, setShowVerifyEmailModal] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState('')
+
   // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
@@ -65,13 +69,12 @@ export default function LoginPage() {
 
         if (error) throw error
 
-        if (data?.session) {
-          setSuccessMsg('สร้างบัญชีสำเร็จ! กำลังเข้าสู่ระบบ...')
-          window.location.href = '/dashboard'
-        } else {
-          setSuccessMsg('สมัครสมาชิกสำเร็จ! กรุณาสลับไปเข้าสู่ระบบ')
-          setMode('signin')
-        }
+        setRegisteredEmail(email.trim())
+        setShowVerifyEmailModal(true)
+        setMode('signin')
+        setEmail('')
+        setPassword('')
+        setFullName('')
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -172,11 +175,11 @@ export default function LoginPage() {
           <div className="absolute -top-20 -left-20 w-60 h-60 bg-blue-600/30 rounded-full blur-2xl pointer-events-none" />
           <div className="relative z-10 flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-blue-400 flex items-center justify-center shadow-md">
-                <ShieldCheck className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1 shadow-md">
+                <img src="/logo.png" alt="SCI-TECH Logo" className="w-full h-full object-contain" />
               </div>
               <span className="text-xl font-black tracking-tight text-white">
-                Complaint<span className="text-blue-500">Sys</span>
+                SCI-TECH <span className="text-blue-400">VOICE</span>
               </span>
             </div>
 
@@ -522,11 +525,11 @@ export default function LoginPage() {
 
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <ShieldCheck className="w-6 h-6 text-white" />
+              <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center p-1.5 shadow-lg shadow-blue-500/20">
+                <img src="/logo.png" alt="SCI-TECH Logo" className="w-full h-full object-contain" />
               </div>
               <span className="text-2xl font-black tracking-tight text-white">
-                Complaint<span className="text-blue-500">Sys</span>
+                SCI-TECH <span className="text-blue-400">VOICE</span>
               </span>
             </div>
 
@@ -681,6 +684,52 @@ export default function LoginPage() {
                 <span>กลับสู่หน้าหลัก</span>
               </Link>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ============================================================================== */}
+      {/* 📧 Modal แจ้งเตือนยืนยันอีเมลหลังสมัครสมาชิก (Verify Email Prompt Modal)        */}
+      {/* ============================================================================== */}
+      {showVerifyEmailModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-5 text-center relative">
+            <button
+              type="button"
+              onClick={() => setShowVerifyEmailModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-blue-100">
+              <Mail className="w-8 h-8 animate-bounce" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                กรุณาตรวจสอบและยืนยันอีเมล
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                ระบบได้ส่งลิงก์สำหรับยืนยันตัวตนไปยังอีเมล:
+              </p>
+              <div className="py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-blue-700 break-all">
+                {registeredEmail}
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed pt-1">
+                กรุณาเปิดกล่องจดหมายของคุณ (หรือโฟลเดอร์ Junk/Spam) และคลิกลิงก์ยืนยัน เพื่อเปิดใช้งานบัญชีของคุณก่อนเข้าสู่ระบบ
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowVerifyEmailModal(false)
+                setMode('signin')
+              }}
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-blue-500/25 transition"
+            >
+              เข้าใจแล้ว ไปยังหน้าเข้าสู่ระบบ
+            </button>
           </div>
         </div>
       )}
