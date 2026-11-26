@@ -56,11 +56,7 @@ export default async function StaffPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar profile={profile} />
-
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <StaffClientView initialTickets={tickets} staffProfile={profile} />
-      </main>
+      <StaffClientView initialTickets={tickets} staffProfile={profile} />
     </div>
   )
 }
