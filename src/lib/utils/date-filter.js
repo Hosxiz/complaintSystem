@@ -45,7 +45,8 @@ export function filterTicketsByDate(tickets = [], filterType = 'ALL', customRang
     }
 
     if (filterType === 'CUSTOM') {
-      const { startDate, endDate } = customRange
+      const startDate = customRange.startDate || customRange.start
+      const endDate = customRange.endDate || customRange.end
       if (!startDate && !endDate) return true
       const start = startDate ? new Date(`${startDate}T00:00:00`) : new Date(0)
       const end = endDate ? new Date(`${endDate}T23:59:59`) : new Date(8640000000000000)

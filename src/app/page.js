@@ -266,8 +266,8 @@ export default function Home() {
                     userProfile?.role === 'admin'
                       ? '/admin'
                       : userProfile?.role === 'staff'
-                      ? '/staff'
-                      : '/dashboard'
+                        ? '/staff'
+                        : '/dashboard'
                   }
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5"
                 >
@@ -445,11 +445,10 @@ export default function Home() {
                             {searchResult.messages.map((msg) => (
                               <div
                                 key={msg.id}
-                                className={`p-3 rounded-2xl text-xs space-y-1 ${
-                                  msg.sender_role === 'staff' || msg.sender_role === 'admin'
-                                    ? 'bg-blue-50/80 border border-blue-100 text-slate-800'
-                                    : 'bg-slate-100 border border-slate-200/60 text-slate-700'
-                                }`}
+                                className={`p-3 rounded-2xl text-xs space-y-1 ${msg.sender_role === 'staff' || msg.sender_role === 'admin'
+                                  ? 'bg-blue-50/80 border border-blue-100 text-slate-800'
+                                  : 'bg-slate-100 border border-slate-200/60 text-slate-700'
+                                  }`}
                               >
                                 <div className="flex items-center justify-between text-[11px] font-bold">
                                   <span className={msg.sender_role === 'staff' ? 'text-blue-700' : 'text-slate-600'}>
@@ -512,8 +511,8 @@ export default function Home() {
                           userProfile?.role === 'admin'
                             ? '/admin'
                             : userProfile?.role === 'staff'
-                            ? '/staff'
-                            : '/dashboard'
+                              ? '/staff'
+                              : '/dashboard'
                         }
                         className="w-full py-3 bg-[#0052cc] hover:bg-[#0041a8] text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-2"
                       >
@@ -625,7 +624,7 @@ export default function Home() {
                         className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs"
                       >
                         <ShieldCheck className="w-4 h-4 text-amber-400" />
-                        <span>เข้าสู่ระบบด้วย SDU Account / ThaID</span>
+                        <span>เข้าสู่ระบบด้วย SDU Account / Google Account</span>
                       </Link>
                     </div>
 
@@ -743,7 +742,7 @@ export default function Home() {
                 มหาวิทยาลัยสวนดุสิต
               </p>
               <span className="inline-block mt-2 px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200/60">
-                บำบัดทุกข์ บำรุงสุข เพื่อชาวสวนดุสิต
+                มาร่วมเป็นส่วนหนึ่งในการ บำบัดทุกข์ บำรุงสุข เพื่อชาวสวนดุสิต
               </span>
             </div>
           </div>
@@ -755,31 +754,31 @@ export default function Home() {
             </h5>
             <ul className="space-y-1.5 text-slate-500">
               <li>
-                <a href="https://sci.dusit.ac.th" target="_blank" rel="noreferrer" className="hover:text-blue-600 flex items-center gap-1 transition">
+                <a href="" target="_blank" rel="noreferrer" className="hover:text-blue-600 flex items-center gap-1 transition">
                   <span>โครงสร้างและผู้บริหารคณะ</span>
                   <ExternalLink className="w-3 h-3 text-slate-300" />
                 </a>
               </li>
               <li>
-                <a href="https://sci.dusit.ac.th" target="_blank" rel="noreferrer" className="hover:text-blue-600 flex items-center gap-1 transition">
+                <a href="" target="_blank" rel="noreferrer" className="hover:text-blue-600 flex items-center gap-1 transition">
                   <span>9 หลักสูตรสาขาวิชา</span>
                   <ExternalLink className="w-3 h-3 text-slate-300" />
                 </a>
               </li>
               <li>
-                <a href="https://sci.dusit.ac.th" target="_blank" rel="noreferrer" className="hover:text-blue-600 flex items-center gap-1 transition">
+                <a href="" target="_blank" rel="noreferrer" className="hover:text-blue-600 flex items-center gap-1 transition">
                   <span>ข่าวสาร/กิจกรรมของคณะ</span>
                   <ExternalLink className="w-3 h-3 text-slate-300" />
                 </a>
               </li>
               <li>
-                <a href="https://sci.dusit.ac.th" target="_blank" rel="noreferrer" className="hover:text-blue-600 flex items-center gap-1 transition">
+                <a href="" target="_blank" rel="noreferrer" className="hover:text-blue-600 flex items-center gap-1 transition">
                   <span>คำสั่ง/ประกาศคณะ</span>
                   <ExternalLink className="w-3 h-3 text-slate-300" />
                 </a>
               </li>
               <li>
-                <a href="https://sci.dusit.ac.th" target="_blank" rel="noreferrer" className="hover:text-blue-600 flex items-center gap-1 transition">
+                <a href="" target="_blank" rel="noreferrer" className="hover:text-blue-600 flex items-center gap-1 transition">
                   <span>สรุปผลการดำเนินงาน</span>
                   <ExternalLink className="w-3 h-3 text-slate-300" />
                 </a>
@@ -835,17 +834,17 @@ export default function Home() {
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                 <span>
-                  อาคารคณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยสวนดุสิต <br />
-                  295 ถนนนครราชสีมา แขวงดุสิต เขตดุสิต กรุงเทพมหานคร 10300
+                  - <br />
+                  -
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                <span>โทรศัพท์: 02-244-5000 (ในวันและเวลาราชการ)</span>
+                <span>-</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-slate-400 shrink-0" />
-                <span>อีเมล: scitech@dusit.ac.th</span>
+                <span>-</span>
               </div>
             </div>
           </div>

@@ -114,6 +114,7 @@ export default function AdminDashboardClient({
             onSelectFilter={setDateFilter}
             customRange={customRange}
             onCustomRangeChange={setCustomRange}
+            totalMatching={filteredTickets.length}
           />
 
           <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80">

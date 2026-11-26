@@ -394,6 +394,7 @@ export default function StaffClientView({ initialTickets = [], staffProfile }) {
               onSelectFilter={setDateFilter}
               customRange={customRange}
               onCustomRangeChange={setCustomRange}
+              totalMatching={dateFilteredTickets.length}
             />
 
             {/* สลับมุมมอง Kanban / List เมื่ออยู่ในหน้า tickets */}
